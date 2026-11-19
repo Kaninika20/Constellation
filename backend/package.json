@@ -1,0 +1,46 @@
+{
+  "name": "campusgraph-backend",
+  "version": "1.0.0",
+  "description": "Backend API for CampusGraph - A Graph-Based College Social Network with Fraud Detection using Neo4j",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:init": "node src/scripts/initDb.js",
+    "db:seed": "node src/scripts/seedDb.js",
+    "test:auth": "node src/scripts/testAuthAndProfiles.js",
+    "test:relationships": "node src/scripts/testSocialRelationships.js",
+    "test:fraud": "node src/scripts/testFraudDetection.js",
+    "test:friendship": "node src/scripts/testFriendship.js",
+    "test:following": "node src/scripts/testFollowing.js",
+    "test:phase3c": "node src/scripts/testPhase3C.js",
+    "test:recommendations": "node src/scripts/testRecommendations.js",
+    "test:audit": "node src/scripts/auditPhase2.js"
+  },
+  "keywords": [
+    "neo4j",
+    "graph-database",
+    "express",
+    "social-network",
+    "fraud-detection",
+    "academic-project"
+  ],
+  "author": "CampusGraph Team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "neo4j-driver": "^5.28.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
+
