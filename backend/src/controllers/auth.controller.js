@@ -17,7 +17,7 @@ export const register = async (req, res, next) => {
     });
 
     return res.status(201).json({
-      message: 'Student successfully registered into CampusGraph.',
+      message: 'Student successfully registered into Constellation.',
       data: result
     });
   } catch (error) {

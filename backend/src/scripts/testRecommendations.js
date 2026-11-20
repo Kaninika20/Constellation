@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph – Recommendation Engine Tests
+ * Constellation – Recommendation Engine Tests
  * =============================================================================
  * Covers:
  *  1.  Personalized recommendations: live Neo4j data, positive scores, correct
@@ -92,7 +92,7 @@ const addPendingRequest = async (fromId, toId) => {
 // ---------------------------------------------------------------------------
 const runTests = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph – Recommendation Engine Tests');
+  console.log(' Constellation – Recommendation Engine Tests');
   console.log('===============================================================');
 
   await cleanupTestData();

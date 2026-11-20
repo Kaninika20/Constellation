@@ -239,7 +239,7 @@ export const RecommendationsPage = () => {
           <div className="text-xs text-slate-700 space-y-1">
             <p className="font-bold text-slate-900">How recommendations work</p>
             <p>
-              CampusGraph traverses your Neo4j graph neighbourhood and scores each non-friend student.
+              Constellation traverses your Neo4j graph neighbourhood and scores each non-friend student.
               <span className="font-semibold text-campus-700"> Common friends = 5 pts, shared courses or interests = 3 pts each,
               shared clubs = 2 pts, common events = 1 pt.</span> Students already connected or with
               pending requests are excluded automatically.

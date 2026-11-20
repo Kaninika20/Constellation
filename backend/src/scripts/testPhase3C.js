@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph - Phase 3C Course, Club & Interest Management Tests
+ * Constellation - Phase 3C Course, Club & Interest Management Tests
  * =============================================================================
  * Verifies STUDIES / MEMBER_OF / HAS_INTEREST management through the real
  * Express API against a live Neo4j instance:
@@ -104,7 +104,7 @@ const countNodes = async (label, prop, value) => {
 
 const runTests = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph Phase 3C - Course, Club & Interest Management Tests');
+  console.log(' Constellation Phase 3C - Course, Club & Interest Management Tests');
   console.log('===============================================================');
 
   const roleSession = getSession();

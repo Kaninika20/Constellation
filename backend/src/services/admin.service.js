@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph – Admin & Enhanced Fraud Scoring Service  (Week 5 – Parts B & C)
+ * Constellation – Admin & Enhanced Fraud Scoring Service  (Week 5 – Parts B & C)
  * =============================================================================
  *
  * SCORING METHODOLOGY (Configurable, Rule-Based)

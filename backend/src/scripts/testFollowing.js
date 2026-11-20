@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph - Phase 3B Following & Followers System Tests
+ * Constellation - Phase 3B Following & Followers System Tests
  * =============================================================================
  * Verifies the directed FOLLOWS relationship lifecycle through the real Express
  * API against a live Neo4j instance:
@@ -108,7 +108,7 @@ const resetFollowSubgraph = async () => {
 
 const runTests = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph Phase 3B - Following & Followers System Tests');
+  console.log(' Constellation Phase 3B - Following & Followers System Tests');
   console.log('===============================================================');
 
   await resetFollowSubgraph();

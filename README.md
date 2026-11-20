@@ -1,10 +1,10 @@
-# CampusGraph
+# Constellation
 
-CampusGraph is a campus social-network application built with React, Express, and Neo4j. Students can discover classmates through academic and social graph relationships; administrators can review explainable risk indicators and investigate the network. Risk indicators are decision-support signals, not proof of fraud, and do not trigger automatic account restrictions.
+Constellation is a campus social-network application built with React, Express, and Neo4j. Students can discover classmates through academic and social graph relationships; administrators can review explainable risk indicators and investigate the network. Risk indicators are decision-support signals, not proof of fraud, and do not trigger automatic account restrictions.
 
 ## Problem statement and objectives
 
-Campus communities have relationships that are awkward to represent as isolated records: students share classes, clubs, events, interests, and friendships. CampusGraph stores these entities and connections as a graph so the application can traverse and visualize them directly.
+Campus communities have relationships that are awkward to represent as isolated records: students share classes, clubs, events, interests, and friendships. Constellation stores these entities and connections as a graph so the application can traverse and visualize them directly.
 
 Project objectives:
 
@@ -88,7 +88,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  Start([Open CampusGraph]) --> Login[Register or sign in]
+  Start([Open Constellation]) --> Login[Register or sign in]
   Login --> Token[Backend validates credentials and returns JWT]
   Token --> Browse[Use profile, campus, and network features]
   Browse --> Request[React sends an authenticated REST request]

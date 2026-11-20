@@ -63,7 +63,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-base text-slate-900 tracking-tight">Campus<span className="text-campus-600">Graph</span></span>
+              <span className="font-bold text-base text-slate-900 tracking-tight">Constella<span className="text-campus-600">tion</span></span>
             </div>
             <span className="text-[10px] text-slate-400 font-mono">Neo4j Powered</span>
           </div>

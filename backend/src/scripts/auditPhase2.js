@@ -1,5 +1,5 @@
 /**
- * CampusGraph - Phase 2 Audit Verification Suite
+ * Constellation - Phase 2 Audit Verification Suite
  * ---------------------------------------------------------------------------
  * Verifies the six Phase 2 invariants against a live Neo4j instance by
  * exercising the actual Express endpoints (login, profile, directory, update)
@@ -79,7 +79,7 @@ const tokenFor = (studentId, email = `${studentId.toLowerCase()}@campus.edu`, ro
 
 const run = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph Phase 2 Audit Verification');
+  console.log(' Constellation Phase 2 Audit Verification');
   console.log('===============================================================');
 
   // -- Real login to obtain an authenticated session + verify login response --

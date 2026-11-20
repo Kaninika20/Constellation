@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph - Week 3 Social Networking & Relationship Management Tests
+ * Constellation - Week 3 Social Networking & Relationship Management Tests
  * =============================================================================
  * Covers:
  *   1.  Unauthenticated access blocks
@@ -127,7 +127,7 @@ const authC = { authorization: `Bearer ${tokenC}` };
 // ---------------------------------------------------------------------------
 const runTests = async () => {
   console.log('===============================================================');
-  console.log('  CampusGraph  –  Week 3  Social Relationship Tests           ');
+  console.log('  Constellation  –  Week 3  Social Relationship Tests           ');
   console.log('===============================================================');
 
   // =========================================================================

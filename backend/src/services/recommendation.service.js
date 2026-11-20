@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph – Graph-Based Recommendation Engine  (Week 4)
+ * Constellation – Graph-Based Recommendation Engine  (Week 4)
  * =============================================================================
  *
  * All recommendations are derived purely from Neo4j graph relationships.

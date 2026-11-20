@@ -88,7 +88,7 @@ const mockRequest = ({ method = 'GET', url = '/', headers = {}, body = null }) =
 
 const runTests = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph Week 4: Fraud Detection & Analytics Tests');
+  console.log(' Constellation Week 4: Fraud Detection & Analytics Tests');
   console.log('===============================================================');
 
   let passed = 0;

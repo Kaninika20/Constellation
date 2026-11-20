@@ -53,7 +53,7 @@ app.use('/api/admin', adminRoutes);
 // Root route welcoming message & API discovery
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to CampusGraph API - Graph-Based College Social Network with Fraud Detection',
+    message: 'Welcome to Constellation API - Graph-Based College Social Network with Fraud Detection',
     version: '1.0.0',
     documentation: {
       health: '/api/health',

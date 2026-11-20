@@ -1,4 +1,4 @@
-# CampusGraph – Sample Cypher Queries & Social Relationship Reference
+# Constellation – Sample Cypher Queries & Social Relationship Reference
 ## Week 3: Social Networking and Relationship Management
 
 This document explains how each social relationship is represented in the Neo4j graph

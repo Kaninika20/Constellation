@@ -50,7 +50,7 @@ export const DashboardPage = () => {
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-campus-200 text-xs font-semibold mb-3 border border-white/15">
             <Sparkles className="w-3.5 h-3.5 text-campus-300" />
-            <span>CampusGraph v1.0 • Neo4j Active Database</span>
+            <span>Constellation v1.0 • Neo4j Active Database</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Welcome back, {user?.name || 'Fellow Scholar'}!

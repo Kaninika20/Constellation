@@ -455,7 +455,7 @@ export const StudentDirectoryPage = () => {
               </div>
 
               <p className="text-xs text-slate-600 mb-5 leading-relaxed">
-                {selectedStudentDetail.student?.bio || 'Active academic peer on CampusGraph.'}
+                {selectedStudentDetail.student?.bio || 'Active academic peer on Constellation.'}
               </p>
 
               {/* Follower / Following counts ([:FOLLOWS]) */}

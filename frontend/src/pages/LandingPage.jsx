@@ -210,7 +210,7 @@ export const LandingPage = () => {
                 Academic Sybil Defense & Bot Clustering
               </h3>
               <p className="text-slate-300 text-sm sm:text-base mt-3 leading-relaxed">
-                Unlike traditional relational databases that struggle with multi-hop traversals, Neo4j allows CampusGraph
+                Unlike traditional relational databases that struggle with multi-hop traversals, Neo4j allows Constellation
                 to detect suspicious patterns in milliseconds: sudden burst followings, tightly knit synthetic cliques,
                 and students without valid course or club associations.
               </p>
@@ -236,7 +236,7 @@ export const LandingPage = () => {
 
       {/* Footer */}
       <footer className="py-8 border-t border-slate-200 text-center text-xs text-slate-500">
-        <p>CampusGraph Academic Project • Powered by Neo4j, Express, React, and Tailwind CSS.</p>
+        <p>Constellation • Powered by Neo4j, Express, React, and Tailwind CSS.</p>
       </footer>
     </div>
   );

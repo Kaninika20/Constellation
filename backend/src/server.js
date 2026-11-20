@@ -7,7 +7,7 @@ const startServer = async () => {
   // Start Express HTTP Server
   const server = app.listen(PORT, async () => {
     console.log(`=======================================================`);
-    console.log(` CampusGraph API Server running on port ${PORT}`);
+    console.log(` Constellation API Server running on port ${PORT}`);
     console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(` Local URL: http://localhost:${PORT}`);
     console.log(`=======================================================`);

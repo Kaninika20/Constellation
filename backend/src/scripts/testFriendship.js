@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CampusGraph - Phase 3A Friend Request Management Tests
+ * Constellation - Phase 3A Friend Request Management Tests
  * =============================================================================
  * Verifies the PENDING_FRIEND_REQUEST + FRIENDS_WITH lifecycle end-to-end
  * through the real Express API against a live Neo4j instance:
@@ -115,7 +115,7 @@ const statusBetween = async (as, targetId) => {
 
 const runTests = async () => {
   console.log('===============================================================');
-  console.log(' CampusGraph Phase 3A - Friend Request Management Tests');
+  console.log(' Constellation Phase 3A - Friend Request Management Tests');
   console.log('===============================================================');
 
   await resetFriendshipSubgraph();

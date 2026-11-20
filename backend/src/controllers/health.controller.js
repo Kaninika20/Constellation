@@ -9,7 +9,7 @@ export const getHealth = async (req, res, next) => {
 
     return res.status(statusCode).json({
       status: isHealthy ? 'healthy' : 'degraded',
-      service: 'CampusGraph Backend API',
+      service: 'Constellation Backend API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),

@@ -3,7 +3,7 @@ import { getSession, verifyConnection, closeDriver } from '../config/neo4j.confi
 import { initializeSchema } from '../services/schema.service.js';
 
 const seedDatabase = async () => {
-  console.log('--- CampusGraph Database Seeding ---');
+  console.log('--- Constellation Database Seeding ---');
   
   const conn = await verifyConnection();
   if (!conn.connected) {

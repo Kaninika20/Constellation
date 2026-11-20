@@ -1,7 +1,7 @@
 import { getSession } from '../config/neo4j.config.js';
 
 /**
- * Cypher definitions for CampusGraph schema constraints and indexes.
+ * Cypher definitions for Constellation schema constraints and indexes.
  * Supports Neo4j 5.x syntax with IF NOT EXISTS.
  */
 export const SCHEMA_DEFINITIONS = {

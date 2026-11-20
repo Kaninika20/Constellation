@@ -1,7 +1,7 @@
 {
   "name": "campusgraph",
   "version": "1.0.0",
-  "description": "CampusGraph – A Graph-Based College Social Network with Fraud Detection Using Neo4j",
+  "description": "Constellation – A Graph-Based College Social Network with Fraud Detection Using Neo4j",
   "private": true,
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
@@ -23,7 +23,7 @@
     "tailwind",
     "express"
   ],
-  "author": "CampusGraph Team",
+  "author": "Constellation Team",
   "license": "ISC"
 }
 

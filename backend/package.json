@@ -1,7 +1,7 @@
 {
   "name": "campusgraph-backend",
   "version": "1.0.0",
-  "description": "Backend API for CampusGraph - A Graph-Based College Social Network with Fraud Detection using Neo4j",
+  "description": "Backend API for Constellation - A Graph-Based College Social Network with Fraud Detection using Neo4j",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -28,7 +28,7 @@
     "fraud-detection",
     "academic-project"
   ],
-  "author": "CampusGraph Team",
+  "author": "Constellation Team",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
