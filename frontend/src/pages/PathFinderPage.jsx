@@ -8,6 +8,7 @@ import { Card, CardHeader, CardContent } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import api from '../services/api';
+import { useStudents } from '../hooks/useStudents';
 
 // ─── Node type styles ─────────────────────────────────────────────────────────
 const NODE_STYLES = {
@@ -90,6 +91,7 @@ const PathArrow = ({ relLabel }) => {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export const PathFinderPage = () => {
+  const { students, loading: loadingStudents, error: studentsError } = useStudents();
   const [studentA, setStudentA] = useState('');
   const [studentB, setStudentB] = useState('');
   const [maxHops, setMaxHops]   = useState(6);
@@ -103,7 +105,7 @@ export const PathFinderPage = () => {
     e.preventDefault();
     if (!studentA.trim() || !studentB.trim()) return;
     if (studentA.trim() === studentB.trim()) {
-      setError('Please enter two different student IDs.');
+      setError('Please select two different students.');
       return;
     }
 
@@ -114,9 +116,7 @@ export const PathFinderPage = () => {
 
     try {
       const res = await api.get(
-        `/recommendations/path/${encodeURIComponent(studentB.trim())}?maxHops=${maxHops}`,
-        // Note: studentA comes from JWT (the logged-in user) on the backend.
-        // For manual lookup of arbitrary A→B we call fraud path endpoint.
+        `/recommendations/path/${encodeURIComponent(studentA.trim())}/${encodeURIComponent(studentB.trim())}?maxHops=${maxHops}`
       );
       const data = res.data?.data;
       if (!data?.found) {
@@ -125,34 +125,7 @@ export const PathFinderPage = () => {
         setResult(data);
       }
     } catch (err) {
-      const status = err.response?.status;
-      if (!status || status >= 500) {
-        // Try the fraud/path endpoint which accepts two arbitrary student IDs
-        try {
-          const res2 = await api.get(`/fraud/path/${encodeURIComponent(studentA.trim())}/${encodeURIComponent(studentB.trim())}`);
-          const data2 = res2.data?.data;
-          if (data2 && data2.path?.length > 0) {
-            // fraud path returns plain nodes without type info, reshape it
-            const reshaped = {
-              found: true,
-              distance: data2.distance,
-              message: data2.message,
-              path: data2.path.flatMap((node, idx, arr) => {
-                const n = { kind: 'node', id: node.studentId || node.id, label: node.name || node.label, type: 'Student', department: node.department };
-                return idx < arr.length - 1 ? [n, { kind: 'rel', label: 'FRIENDS_WITH' }] : [n];
-              }),
-            };
-            setResult(reshaped);
-          } else {
-            setError(data2?.message || 'No connection found within the hop limit.');
-          }
-        } catch {
-          setResult(MOCK_PATH);
-          setOffline(true);
-        }
-      } else {
-        setError(err.response?.data?.message || 'Could not find connection path.');
-      }
+      setError(err.response?.data?.message || 'Could not find connection path.');
     } finally {
       setLoading(false);
     }
@@ -195,32 +168,59 @@ export const PathFinderPage = () => {
           <Card>
             <CardHeader
               title="Find Connection"
-              subtitle="Enter two student IDs to discover how they are linked"
+              subtitle="Select two students by name to discover how they are linked"
             />
             <CardContent>
               <form onSubmit={handleSearch} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Student A — ID
+                  <label htmlFor="path-student-a" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Student A
                   </label>
-                  <input
-                    type="text" value={studentA}
-                    onChange={e => setStudentA(e.target.value)}
-                    placeholder="e.g. STU2026001"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-campus-500 focus:bg-white"
-                  />
+                  <select
+                    id="path-student-a"
+                    value={studentA}
+                    onChange={e => {
+                      setStudentA(e.target.value);
+                      setResult(null);
+                      setError('');
+                      setOffline(false);
+                    }}
+                    disabled={loadingStudents || Boolean(studentsError)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-campus-500 focus:bg-white"
+                  >
+                    <option value="">{loadingStudents ? 'Loading students…' : 'Select a student…'}</option>
+                    {students.map(student => (
+                      <option key={student.studentId} value={student.studentId}>
+                        {student.name || student.studentId} ({student.studentId})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Student B — ID
+                  <label htmlFor="path-student-b" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Student B
                   </label>
-                  <input
-                    type="text" value={studentB}
-                    onChange={e => setStudentB(e.target.value)}
-                    placeholder="e.g. STU2026005"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-campus-500 focus:bg-white"
-                  />
+                  <select
+                    id="path-student-b"
+                    value={studentB}
+                    onChange={e => {
+                      setStudentB(e.target.value);
+                      setResult(null);
+                      setError('');
+                      setOffline(false);
+                    }}
+                    disabled={loadingStudents || Boolean(studentsError)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-campus-500 focus:bg-white"
+                  >
+                    <option value="">{loadingStudents ? 'Loading students…' : 'Select a student…'}</option>
+                    {students.map(student => (
+                      <option key={student.studentId} value={student.studentId}>
+                        {student.name || student.studentId} ({student.studentId})
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                {studentsError && <p role="alert" className="text-xs text-red-600">{studentsError}</p>}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -243,7 +243,7 @@ export const PathFinderPage = () => {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" isLoading={loading} icon={Search}>
+                <Button type="submit" className="w-full" isLoading={loading} disabled={loadingStudents || !studentA || !studentB} icon={Search}>
                   Find Shortest Path
                 </Button>
 
@@ -298,7 +298,7 @@ export const PathFinderPage = () => {
               <GitBranch className="w-14 h-14 text-slate-200 mb-4" />
               <h4 className="text-sm font-bold text-slate-700">No path computed yet</h4>
               <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                Enter two student IDs on the left and click "Find Shortest Path" to visualise the connection chain.
+                Select two students on the left and click "Find Shortest Path" to visualise the connection chain.
               </p>
             </div>
           ) : (

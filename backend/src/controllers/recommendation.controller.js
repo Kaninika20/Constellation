@@ -93,6 +93,21 @@ export const getConnectionPath = async (req, res, next) => {
 };
 
 /**
+ * GET /api/recommendations/path/:studentIdA/:studentIdB
+ * Returns the shortest connection path between two selected students.
+ */
+export const getConnectionPathBetween = async (req, res, next) => {
+  try {
+    const { studentIdA, studentIdB } = req.params;
+    const maxHops = Math.min(parseInt(req.query.maxHops, 10) || 6, 10);
+    const result = await recService.getConnectionPath(studentIdA, studentIdB, maxHops);
+    return res.status(200).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/recommendations/weights
  * Returns the default scoring weights.
  */

@@ -3,6 +3,7 @@ import {
   getRecommendations,
   getMutualFriends,
   getConnectionPath,
+  getConnectionPathBetween,
   getWeights,
   getSharedConnections,
 } from '../controllers/recommendation.controller.js';
@@ -24,6 +25,9 @@ router.get('/mutual/:targetStudentId', getMutualFriends);
 
 // GET /api/recommendations/shared/:targetStudentId – all shared connections (friends + courses + clubs + interests + events)
 router.get('/shared/:targetStudentId', getSharedConnections);
+
+// GET /api/recommendations/path/:studentIdA/:studentIdB – arbitrary student pair
+router.get('/path/:studentIdA/:studentIdB', getConnectionPathBetween);
 
 // GET /api/recommendations/path/:targetStudentId   – connection path finder
 router.get('/path/:targetStudentId', getConnectionPath);

@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useStudents } from '../hooks/useStudents';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_FRIENDS = [
@@ -21,7 +21,7 @@ const MOCK_MUTUAL = {
 };
 
 export const MutualConnectionsPage = () => {
-  const { user } = useAuth();
+  const { students, loading: loadingStudents, error: studentsError } = useStudents();
 
   const [friends, setFriends]           = useState([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
@@ -89,7 +89,7 @@ export const MutualConnectionsPage = () => {
     setLookupError('');
     setLookupResult(null);
     try {
-      const res = await api.get(`/recommendations/shared/${lookupId.trim()}`);
+      const res = await api.get(`/recommendations/shared/${encodeURIComponent(lookupId)}`);
       setLookupResult(res.data?.data || null);
     } catch (err) {
       if (err.response?.status === 404) {
@@ -257,21 +257,36 @@ export const MutualConnectionsPage = () => {
           <Card>
             <CardHeader
               title="Lookup Mutual Friends"
-              subtitle="Enter any student ID to find shared connections"
+              subtitle="Select a student by name to find shared connections"
             />
             <CardContent>
               <form onSubmit={handleLookup} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Student ID</label>
-                  <input
-                    type="text"
+                  <label htmlFor="mutual-student" className="block text-xs font-semibold text-slate-700 mb-1">Student</label>
+                  <select
+                    id="mutual-student"
                     value={lookupId}
-                    onChange={e => setLookupId(e.target.value)}
-                    placeholder="e.g. STU2026003"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-campus-500 focus:bg-white"
-                  />
+                    onChange={e => {
+                      setLookupId(e.target.value);
+                      setLookupResult(null);
+                      setLookupError('');
+                    }}
+                    disabled={loadingStudents || Boolean(studentsError)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-campus-500 focus:bg-white"
+                  >
+                    <option value="">{loadingStudents ? 'Loading students…' : 'Select a student…'}</option>
+                    {students.map(student => (
+                      <option key={student.studentId} value={student.studentId}>
+                        {student.name || student.studentId} ({student.studentId})
+                      </option>
+                    ))}
+                    {!loadingStudents && !studentsError && students.length === 0 && (
+                      <option value="" disabled>No students found</option>
+                    )}
+                  </select>
+                  {studentsError && <p role="alert" className="mt-1 text-xs text-red-600">{studentsError}</p>}
                 </div>
-                <Button type="submit" size="sm" className="w-full" isLoading={lookupLoading} icon={Search}>
+                <Button type="submit" size="sm" className="w-full" isLoading={lookupLoading} disabled={loadingStudents || !lookupId} icon={Search}>
                   Find Mutual Friends
                 </Button>
               </form>

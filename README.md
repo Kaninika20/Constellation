@@ -197,14 +197,19 @@ MATCH (b:Student {studentId: $studentIdB})
 MERGE (a)-[:FRIENDS_WITH]-(b);
 ```
 
-The shortest-path API limits traversal to eight hops:
+The path finder can query any two selected students through the authenticated `GET /api/recommendations/path/:studentIdA/:studentIdB?maxHops=6` endpoint. The requested hop count is capped at 10; the Cypher traversal uses a literal maximum and filters by the requested count:
 
 ```cypher
 MATCH path = shortestPath(
-  (a:Student {studentId: $studentIdA})-[*..8]-(b:Student {studentId: $studentIdB})
+  (a:Student {studentId: $studentIdA})
+  -[:FRIENDS_WITH|STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST*1..10]-
+  (b:Student {studentId: $studentIdB})
 )
+WHERE length(path) <= $maxHops
 RETURN nodes(path), length(path);
 ```
+
+The separate fraud-analysis path endpoint remains limited to eight hops.
 
 Recommendation scoring traverses shared graph neighborhoods:
 

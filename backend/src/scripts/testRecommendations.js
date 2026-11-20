@@ -240,6 +240,20 @@ const runTests = async () => {
     assert(ip?.distance > 0, `Indirect path distance > 0 (got ${ip?.distance})`);
     assert(Array.isArray(ip?.path) && ip.path.length > 0, 'Path contains nodes');
 
+    // The selected start ID must be used instead of the authenticated student ID.
+    const arbitrary = await mockRequest({
+      url: '/api/recommendations/path/STU2026002/STU2026004?maxHops=6',
+      headers: authA
+    });
+    assert(arbitrary.statusCode === 200, 'Arbitrary-pair path request -> 200', JSON.stringify(arbitrary.body?.error));
+    assert(
+      arbitrary.body?.data?.found === true &&
+        arbitrary.body.data.pathNodes[0]?.id === 'STU2026002' &&
+        arbitrary.body.data.pathNodes.at(-1)?.id === 'STU2026004',
+      'Arbitrary-pair path uses both selected student IDs',
+      JSON.stringify(arbitrary.body?.data)
+    );
+
     // Self path
     const selfPath = await mockRequest({ url: '/api/recommendations/path/STU2026001?maxHops=6', headers: authA });
     assert(selfPath.statusCode === 200, 'Self-path request -> 200');
@@ -261,6 +275,7 @@ const runTests = async () => {
       '/api/recommendations/mutual/STU2026002',
       '/api/recommendations/shared/STU2026002',
       '/api/recommendations/path/STU2026002',
+      '/api/recommendations/path/STU2026002/STU2026004',
     ];
     for (const url of endpoints) {
       const r = await mockRequest({ url });
