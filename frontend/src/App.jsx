@@ -22,6 +22,7 @@ import { InterestsPage } from './pages/InterestsPage';
 import { CommunityAnalysisPage } from './pages/CommunityAnalysisPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AdminCatalogPage } from './pages/AdminCatalogPage';
+import { AdminAccessPage } from './pages/AdminAccessPage';
 import { useAuth } from './context/AuthContext';
 
 const AdminOnlyRoute = ({ children }) => {
@@ -48,6 +49,7 @@ function App() {
           <Route path="/communities" element={<CommunityAnalysisPage />} />
           <Route path="/admin" element={<AdminOnlyRoute><AdminDashboardPage /></AdminOnlyRoute>} />
           <Route path="/admin/catalog" element={<AdminOnlyRoute><AdminCatalogPage /></AdminOnlyRoute>} />
+          <Route path="/admin/access" element={<AdminOnlyRoute><AdminAccessPage /></AdminOnlyRoute>} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/courses" element={<CoursesPage />} />

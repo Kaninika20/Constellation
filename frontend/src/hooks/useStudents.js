@@ -7,11 +7,14 @@ export const useStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     const loadStudents = async () => {
+      setLoading(true);
+      setError('');
       try {
         const allStudents = [];
         let total = 0;
@@ -47,7 +50,8 @@ export const useStudents = () => {
 
     loadStudents();
     return () => { active = false; };
-  }, []);
+  }, [reloadKey]);
 
-  return { students, loading, error };
+  const refresh = () => setReloadKey(key => key + 1);
+  return { students, loading, error, refresh };
 };

@@ -138,6 +138,7 @@ export const ProfilePage = () => {
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-slate-900">{activeStudent?.name || 'Academic Scholar'}</h2>
                   <Badge color="blue">Verified Student</Badge>
+                  {activeStudent?.role === 'admin' && <Badge color="purple">Admin</Badge>}
                 </div>
                 <p className="text-xs text-slate-500 font-mono">
                   Student ID: {activeStudent?.studentId} • {activeStudent?.department}

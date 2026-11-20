@@ -10,6 +10,7 @@ import {
   getStudentRiskDetail,
   markAccountReviewed,
   getDefaultThresholds,
+  setStudentRole,
 } from '../controllers/admin.controller.js';
 import { createCourse } from '../controllers/course.controller.js';
 import { createClub } from '../controllers/club.controller.js';
@@ -23,6 +24,7 @@ router.use(requireAdmin);
 router.post('/courses', createCourse);
 router.post('/clubs', createClub);
 router.post('/events', createAdminEvent);
+router.patch('/students/:studentId/role', setStudentRole);
 
 router.get('/dashboard',                       getDashboardStats);
 router.get('/graph',                           getAdminNetworkOverview);

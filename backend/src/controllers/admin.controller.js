@@ -90,3 +90,22 @@ export const getDefaultThresholds = async (req, res, next) => {
     return res.status(200).json({ success: true, data: DEFAULT_THRESHOLDS });
   } catch (err) { next(err); }
 };
+
+export const setStudentRole = async (req, res, next) => {
+  try {
+    const { role } = req.body || {};
+    if (!['student', 'admin'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role must be either student or admin.'
+      });
+    }
+
+    const student = await adminService.setStudentRole(req.params.studentId, role);
+    return res.status(200).json({
+      success: true,
+      message: role === 'admin' ? 'Administrator access granted.' : 'Administrator access removed.',
+      data: student
+    });
+  } catch (err) { next(err); }
+};

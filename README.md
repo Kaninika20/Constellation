@@ -279,7 +279,9 @@ SET s.role = 'admin';
 
 Replace the example email with the intended account. The administrator must sign in again after promotion so the JWT includes the role. The API also checks the current Neo4j role on each administrator request. Risk flags are review signals only; the application does not automatically ban accounts.
 
-After signing in, administrators can use **Admin Investigation** for risk reviews and **Campus Catalog** to add or update courses and clubs, and create campus events. Course department is used for subject grouping; subjects are not separate graph nodes. Course and club records are upserted by their IDs, while new events receive an ID automatically if one is not supplied. Catalog APIs are protected by the administrator role.
+After signing in, administrators can use **Admin Investigation** for risk reviews, **Campus Catalog** to add or update courses and clubs and create campus events, and **Administrator Access** to appoint a successor or revoke administrator roles. The final administrator cannot be removed; an administrator handing over access must promote a successor first. These role changes are protected by backend authorization, and stale tokens stop authorizing administrator requests after demotion.
+
+Administrator profiles are already publicly followable: following takes effect immediately and does not require approval. Friendship requests are a separate feature and retain their existing acceptance flow. Course department is used for subject grouping; subjects are not separate graph nodes. Course and club records are upserted by their IDs, while new events receive an ID automatically if one is not supplied. Catalog APIs are protected by the administrator role.
 
 ## Tests and verification
 

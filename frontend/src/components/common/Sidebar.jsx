@@ -11,11 +11,13 @@ import {
   CalendarDays,
   Sparkles,
   ShieldAlert,
+  Shield,
   LogOut,
   Share2,
   UserCheck,
   GitBranch
 } from 'lucide-react';
+import { Badge } from './Badge';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
@@ -43,7 +45,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
     ? [
         ...navItems,
         { label: 'Admin Investigation', path: '/admin', icon: ShieldAlert, badge: 'Admin' },
-        { label: 'Campus Catalog', path: '/admin/catalog', icon: ClipboardList, badge: 'Admin' }
+        { label: 'Campus Catalog', path: '/admin/catalog', icon: ClipboardList, badge: 'Admin' },
+        { label: 'Administrator Access', path: '/admin/access', icon: Shield, badge: 'Admin' }
       ]
     : navItems;
 
@@ -147,7 +150,10 @@ export const Sidebar = ({ isOpen, onClose }) => {
             />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-slate-900 truncate">{user?.name || 'Guest Student'}</p>
-              <p className="text-[11px] text-slate-500 truncate">{user?.department || 'Computer Science'}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[11px] text-slate-500 truncate">{user?.department || 'Computer Science'}</p>
+                {user?.role === 'admin' && <Badge color="purple" className="px-1.5 py-0 text-[9px]">Admin</Badge>}
+              </div>
             </div>
             <button
               onClick={handleLogout}

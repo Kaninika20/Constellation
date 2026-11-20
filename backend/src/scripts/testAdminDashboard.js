@@ -83,6 +83,7 @@ const cleanGraph = async () => {
       WHERE n.studentId IN [$student, $related]
         OR n.courseCode = $course OR n.clubId = $club
         OR n.eventId IN [$event, $createdEvent] OR n.name = $interest
+        OR (n:AdminRoleManagementLock AND n.id = 'singleton')
       DETACH DELETE n
     `, testIds);
   } finally {
@@ -128,17 +129,54 @@ const run = async () => {
       body: { title: 'Unauthorized event', date: '2026-12-20', location: 'Test Venue' }
     });
     assert(unauthenticatedEventCreate.statusCode === 401, 'Admin event creation rejects unauthenticated requests');
+    const unauthenticatedRoleChange = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.student}/role`,
+      body: { role: 'admin' }
+    });
+    assert(unauthenticatedRoleChange.statusCode === 401, 'Admin role changes reject unauthenticated requests');
     const studentEventCreate = await request({
       method: 'POST', url: '/api/admin/events', role: 'student',
       body: { title: 'Unauthorized event', date: '2026-12-20', location: 'Test Venue' }
     });
     assert(studentEventCreate.statusCode === 403, 'Admin event creation rejects non-admin students');
+    const studentRoleChange = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.student}/role`, role: 'student',
+      body: { role: 'admin' }
+    });
+    assert(studentRoleChange.statusCode === 403, 'Admin role changes reject non-admin students');
     const roleSession = getSession();
     try {
       await roleSession.run('MATCH (s:Student {studentId: $studentId}) SET s.role = $role', { studentId: testIds.student, role: 'admin' });
     } finally {
       await roleSession.close();
     }
+
+    const invalidRoleChange = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.student}/role`, role: 'admin',
+      body: { role: 'superadmin' }
+    });
+    assert(invalidRoleChange.statusCode === 400, 'Admin role changes reject unsupported roles');
+    const lastAdminRemoval = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.student}/role`, role: 'admin',
+      body: { role: 'student' }
+    });
+    assert(lastAdminRemoval.statusCode === 409, 'The final administrator cannot remove their own admin role');
+    const promoteSuccessor = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.related}/role`, role: 'admin',
+      body: { role: 'admin' }
+    });
+    assert(
+      promoteSuccessor.statusCode === 200 && promoteSuccessor.body.data.role === 'admin',
+      'Current administrator can promote a successor'
+    );
+    const revokeSuccessor = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.related}/role`, role: 'admin',
+      body: { role: 'student' }
+    });
+    assert(
+      revokeSuccessor.statusCode === 200 && revokeSuccessor.body.data.role === 'student',
+      'Administrator can revoke a successor while retaining access'
+    );
 
     const dashboard = await request({ url: '/api/admin/dashboard', role: 'admin' });
     assert(dashboard.statusCode === 200 && dashboard.body.data.totalStudents >= 2, 'Admin dashboard returns campus totals');
@@ -213,6 +251,19 @@ const run = async () => {
     }
     const analysis = await request({ method: 'POST', url: '/api/admin/analyze', role: 'admin', body: {} });
     assert(analysis.statusCode === 200 && analysis.body.data.analyzed > 0, 'Admin can run risk analysis through the protected API');
+
+    const finalSuccessor = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.related}/role`, role: 'admin',
+      body: { role: 'admin' }
+    });
+    assert(finalSuccessor.statusCode === 200, 'Current administrator can promote the next administrator');
+    const handoff = await request({
+      method: 'PATCH', url: `/api/admin/students/${testIds.student}/role`, role: 'admin',
+      body: { role: 'student' }
+    });
+    assert(handoff.statusCode === 200 && handoff.body.data.role === 'student', 'Current administrator can remove their own role after a successor is appointed');
+    const staleAdminAfterHandoff = await request({ url: '/api/admin/dashboard', role: 'admin' });
+    assert(staleAdminAfterHandoff.statusCode === 403, 'Demoted administrator token no longer authorizes admin APIs');
   } finally {
     try {
       try {

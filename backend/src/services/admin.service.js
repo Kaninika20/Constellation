@@ -37,7 +37,7 @@
  * =============================================================================
  */
 
-import { getDriver } from '../config/neo4j.config.js';
+import { getDriver, getSession } from '../config/neo4j.config.js';
 import neo4j from 'neo4j-driver';
 
 const toInt   = (v) => (neo4j.isInt(v) ? v.toNumber() : (v ?? 0));
@@ -357,6 +357,63 @@ export const markAccountReviewed = async (studentId, reviewerStudentId, notes = 
       reviewedBy: reviewerStudentId,
       reviewedAt: res.reviewedAt
     };
+  } finally {
+    await session.close();
+  }
+};
+
+export const setStudentRole = async (studentId, role) => {
+  if (!['student', 'admin'].includes(role)) {
+    const error = new Error('Role must be either student or admin.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const session = getSession(neo4j.session.WRITE);
+  try {
+    return await session.executeWrite(async transaction => {
+      await transaction.run(`
+        MERGE (lock:AdminRoleManagementLock {id: 'singleton'})
+        SET lock.version = coalesce(lock.version, 0) + 1
+      `);
+
+      const targetResult = await transaction.run(`
+        MATCH (s:Student {studentId: $studentId})
+        RETURN s.role AS role
+      `, { studentId });
+      if (targetResult.records.length === 0) {
+        const error = new Error('Student not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const currentRole = targetResult.records[0].get('role');
+      if (currentRole === 'admin' && role === 'student') {
+        const adminCountResult = await transaction.run(`
+          MATCH (admin:Student {role: 'admin'})
+          RETURN count(admin) AS count
+        `);
+        const adminCount = Number(adminCountResult.records[0].get('count'));
+        if (adminCount <= 1) {
+          const error = new Error('At least one administrator must remain.');
+          error.statusCode = 409;
+          throw error;
+        }
+      }
+
+      const updateResult = await transaction.run(`
+        MATCH (s:Student {studentId: $studentId})
+        SET s.role = $role, s.updatedAt = datetime()
+        RETURN s.studentId AS studentId, s.name AS name, s.email AS email, s.role AS role
+      `, { studentId, role });
+      const updatedStudent = updateResult.records[0];
+      return {
+        studentId: updatedStudent.get('studentId'),
+        name: updatedStudent.get('name'),
+        email: updatedStudent.get('email'),
+        role: updatedStudent.get('role')
+      };
+    });
   } finally {
     await session.close();
   }

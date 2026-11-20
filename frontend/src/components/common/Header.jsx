@@ -3,6 +3,7 @@ import { Search, Bell, Menu, ShieldCheck, Database, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import { Badge } from './Badge';
 
 export const Header = ({ onOpenSidebar }) => {
   const { user } = useAuth();
@@ -83,7 +84,10 @@ export const Header = ({ onOpenSidebar }) => {
             className="w-8 h-8 rounded-full object-cover border border-slate-200 bg-white"
           />
           <div className="hidden md:block text-left">
-            <span className="block text-xs font-semibold text-slate-800 leading-tight">{user?.name || 'My Profile'}</span>
+            <span className="flex items-center gap-1 text-xs font-semibold text-slate-800 leading-tight">
+              {user?.name || 'My Profile'}
+              {user?.role === 'admin' && <Badge color="purple" className="px-1.5 py-0 text-[9px]">Admin</Badge>}
+            </span>
             <span className="block text-[10px] text-slate-500 leading-tight">{user?.studentId || 'ID: STU2026'}</span>
           </div>
         </Link>
