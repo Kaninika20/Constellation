@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Share2, Mail, Lock, ArrowRight, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { CygnusMark } from '../components/common/CygnusMark';
 import { useAuth } from '../context/AuthContext';
 
 export const LoginPage = () => {
@@ -45,8 +46,8 @@ export const LoginPage = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 group mb-4">
-          <div className="w-11 h-11 rounded-2xl bg-campus-600 flex items-center justify-center text-white shadow-md shadow-campus-500/25 group-hover:scale-105 transition-transform">
-            <Share2 className="w-6 h-6" />
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-slate-950 via-indigo-900 to-indigo-600 text-white shadow-md shadow-indigo-950/20 ring-1 ring-indigo-100 transition-transform group-hover:scale-105">
+            <CygnusMark className="h-7 w-7" />
           </div>
           <span className="font-extrabold text-2xl text-slate-900 tracking-tight">Constella<span className="text-campus-600">tion</span></span>
         </Link>

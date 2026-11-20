@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Share2, Shield, Network, ArrowRight } from 'lucide-react';
+import { Shield, Network, ArrowRight } from 'lucide-react';
 import { Button } from './Button';
+import { CygnusMark } from './CygnusMark';
 import { useAuth } from '../../context/AuthContext';
 
 export const Navbar = () => {
@@ -13,8 +14,8 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-campus-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-campus-500/20 group-hover:scale-105 transition-transform">
-            <Share2 className="w-5 h-5" />
+          <div className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-indigo-900 to-indigo-600 shadow-md shadow-indigo-950/20 ring-1 ring-white/40 transition-transform group-hover:scale-105">
+            <CygnusMark className="h-7 w-7 text-white transition-transform duration-300 group-hover:rotate-3" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">

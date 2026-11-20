@@ -15,6 +15,7 @@ import {
   Activity
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { CygnusMark } from '../components/common/CygnusMark';
 import { Navbar } from '../components/common/Navbar';
 import api from '../services/api';
 
@@ -38,9 +39,16 @@ export const LandingPage = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28 bg-gradient-to-b from-slate-50 via-white to-white">
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white pt-12 pb-20 lg:pt-20 lg:pb-28">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-44 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-indigo-200/40 blur-3xl" />
+          <div className="absolute right-[10%] top-24 h-48 w-48 rounded-full bg-cyan-100/70 blur-3xl" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto">
+          <div className="relative mx-auto max-w-3xl text-center">
+            <div className="relative mx-auto mb-6 grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-900 to-indigo-600 shadow-xl shadow-indigo-950/20 ring-1 ring-white/70">
+              <CygnusMark className="h-11 w-11 text-white" />
+            </div>
             {/* Pill */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-campus-50 border border-campus-200 text-campus-700 text-xs font-semibold mb-6 shadow-xs">
               <Sparkles className="w-4 h-4 text-campus-600" />

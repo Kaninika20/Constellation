@@ -13,11 +13,11 @@ import {
   ShieldAlert,
   Shield,
   LogOut,
-  Share2,
   UserCheck,
   GitBranch
 } from 'lucide-react';
 import { Badge } from './Badge';
+import { CygnusMark } from './CygnusMark';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
@@ -72,8 +72,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
       >
         {/* Logo */}
         <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-100">
-          <div className="w-9 h-9 rounded-xl bg-campus-600 flex items-center justify-center text-white shadow-md shadow-campus-500/25">
-            <Share2 className="w-5 h-5" />
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-slate-950 via-indigo-900 to-indigo-600 text-white shadow-md shadow-indigo-950/20 ring-1 ring-indigo-100">
+            <CygnusMark className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
