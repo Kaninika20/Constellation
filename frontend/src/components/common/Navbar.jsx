@@ -18,7 +18,7 @@ export const Navbar = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-lg text-slate-900 tracking-tight">Campus<span className="text-campus-600">Graph</span></span>
+              <span className="font-extrabold text-lg text-slate-900 tracking-tight">Constella<span className="text-campus-600">tion</span></span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-campus-100 text-campus-700 tracking-wider">NEO4J</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-none hidden sm:block">Graph-Based College Social Network</p>

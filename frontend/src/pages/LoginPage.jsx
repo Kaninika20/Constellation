@@ -48,7 +48,7 @@ export const LoginPage = () => {
           <div className="w-11 h-11 rounded-2xl bg-campus-600 flex items-center justify-center text-white shadow-md shadow-campus-500/25 group-hover:scale-105 transition-transform">
             <Share2 className="w-6 h-6" />
           </div>
-          <span className="font-extrabold text-2xl text-slate-900 tracking-tight">Campus<span className="text-campus-600">Graph</span></span>
+          <span className="font-extrabold text-2xl text-slate-900 tracking-tight">Constella<span className="text-campus-600">tion</span></span>
         </Link>
         <h2 className="text-2xl font-bold tracking-tight text-slate-900">
           Sign in to your campus node

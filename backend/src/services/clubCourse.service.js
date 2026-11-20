@@ -311,11 +311,24 @@ export const getCourseStudents = async (courseCode) => {
  * MERGE on courseCode: re-creating an existing course updates it instead of duplicating.
  */
 export const createCourse = async ({ courseCode, courseName, department, credits }) => {
-  if (!courseCode || !courseName || !department) {
+  const normalizedCourseCode = typeof courseCode === 'string' ? courseCode.trim() : '';
+  const normalizedCourseName = typeof courseName === 'string' ? courseName.trim() : '';
+  const normalizedDepartment = typeof department === 'string' ? department.trim() : '';
+  const normalizedCredits = credits === undefined || credits === null || credits === ''
+    ? 0
+    : Number(credits);
+
+  if (!normalizedCourseCode || !normalizedCourseName || !normalizedDepartment) {
     const error = new Error('courseCode, courseName and department are required to create a course.');
     error.statusCode = 400;
     throw error;
   }
+  if (!Number.isInteger(normalizedCredits) || normalizedCredits < 0 || normalizedCredits > 30) {
+    const error = new Error('credits must be a whole number between 0 and 30.');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const session = getSession();
   try {
     const query = `
@@ -328,10 +341,10 @@ export const createCourse = async ({ courseCode, courseName, department, credits
       RETURN c
     `;
     const res = await session.run(query, {
-      courseCode: courseCode.trim(),
-      courseName: courseName.trim(),
-      department: department.trim(),
-      credits: parseInt(credits, 10) || 0
+      courseCode: normalizedCourseCode,
+      courseName: normalizedCourseName,
+      department: normalizedDepartment,
+      credits: normalizedCredits
     });
     return res.records[0].get('c').properties;
   } finally {
@@ -344,7 +357,12 @@ export const createCourse = async ({ courseCode, courseName, department, credits
  * MERGE on clubId: re-creating an existing club updates it instead of duplicating.
  */
 export const createClub = async ({ clubId, name, description, category }) => {
-  if (!clubId || !name || !category) {
+  const normalizedClubId = typeof clubId === 'string' ? clubId.trim() : '';
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
+  const normalizedCategory = typeof category === 'string' ? category.trim() : '';
+  const normalizedDescription = typeof description === 'string' ? description.trim() : '';
+
+  if (!normalizedClubId || !normalizedName || !normalizedCategory) {
     const error = new Error('clubId, name and category are required to create a club.');
     error.statusCode = 400;
     throw error;
@@ -361,10 +379,10 @@ export const createClub = async ({ clubId, name, description, category }) => {
       RETURN cl
     `;
     const res = await session.run(query, {
-      clubId: clubId.trim(),
-      name: name.trim(),
-      description: (description || '').trim(),
-      category: category.trim()
+      clubId: normalizedClubId,
+      name: normalizedName,
+      description: normalizedDescription,
+      category: normalizedCategory
     });
     return res.records[0].get('cl').properties;
   } finally {

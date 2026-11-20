@@ -1,11 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Network,
   Users,
   User,
   BookOpen,
+  ClipboardList,
   Users2,
   CalendarDays,
   Sparkles,
@@ -37,9 +38,19 @@ const navItems = [
 
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const visibleNavItems = user?.role === 'admin'
-    ? [...navItems, { label: 'Admin Investigation', path: '/admin', icon: ShieldAlert, badge: 'Admin' }]
+    ? [
+        ...navItems,
+        { label: 'Admin Investigation', path: '/admin', icon: ShieldAlert, badge: 'Admin' },
+        { label: 'Campus Catalog', path: '/admin/catalog', icon: ClipboardList, badge: 'Admin' }
+      ]
     : navItems;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <>
@@ -139,7 +150,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
               <p className="text-[11px] text-slate-500 truncate">{user?.department || 'Computer Science'}</p>
             </div>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               title="Sign Out"
               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >

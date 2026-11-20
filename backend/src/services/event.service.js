@@ -49,12 +49,20 @@ export const createEvent = async ({
   date,
   location,
   description,
+  category = '',
   creatorStudentId = null
 }) => {
+  if (![title, date, location].every(value => typeof value === 'string' && value.trim())) {
+    const error = new Error('title, date, and location are required to create an event.');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const session = getSession();
   try {
-    const finalEventId = eventId && eventId.trim() !== ''
-      ? eventId.trim()
+    const normalizedEventId = typeof eventId === 'string' ? eventId.trim() : '';
+    const finalEventId = normalizedEventId
+      ? normalizedEventId
       : `EVT_${Date.now().toString().slice(-6)}`;
 
     // 1. Check if event ID already exists
@@ -74,6 +82,7 @@ export const createEvent = async ({
         date: $date,
         location: $location,
         description: $description,
+        category: $category,
         createdBy: $creatorStudentId,
         createdAt: datetime(),
         updatedAt: datetime()
@@ -84,9 +93,10 @@ export const createEvent = async ({
     const res = await session.run(createQuery, {
       finalEventId,
       title: title.trim(),
-      date,
+      date: date.trim(),
       location: location.trim(),
-      description: description ? description.trim() : '',
+      description: typeof description === 'string' ? description.trim() : '',
+      category: typeof category === 'string' ? category.trim() : '',
       creatorStudentId
     });
 

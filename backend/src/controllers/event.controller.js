@@ -15,9 +15,9 @@ export const getEvents = async (req, res, next) => {
 export const createEvent = async (req, res, next) => {
   try {
     const creatorStudentId = req.user ? req.user.studentId : null;
-    const { eventId, title, date, location, description } = req.body;
+    const { eventId, title, date, location, description, category } = req.body;
 
-    if (!title || !date || !location) {
+    if (![title, date, location].every(value => typeof value === 'string' && value.trim())) {
       return res.status(400).json({
         error: 'Validation Error',
         message: 'title, date, and location are required fields for creating an event.'
@@ -30,6 +30,7 @@ export const createEvent = async (req, res, next) => {
       date,
       location,
       description,
+      category,
       creatorStudentId
     });
 

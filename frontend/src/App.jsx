@@ -21,12 +21,13 @@ import { PathFinderPage } from './pages/PathFinderPage';
 import { InterestsPage } from './pages/InterestsPage';
 import { CommunityAnalysisPage } from './pages/CommunityAnalysisPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AdminCatalogPage } from './pages/AdminCatalogPage';
 import { useAuth } from './context/AuthContext';
 
-const AdminOnlyRoute = () => {
+const AdminOnlyRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <p className="p-8 text-center text-sm text-slate-500">Checking administrator access…</p>;
-  return user?.role === 'admin' ? <AdminDashboardPage /> : <Navigate to="/dashboard" replace />;
+  return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -45,7 +46,8 @@ function App() {
           <Route path="/directory" element={<StudentDirectoryPage />} />
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/communities" element={<CommunityAnalysisPage />} />
-          <Route path="/admin" element={<AdminOnlyRoute />} />
+          <Route path="/admin" element={<AdminOnlyRoute><AdminDashboardPage /></AdminOnlyRoute>} />
+          <Route path="/admin/catalog" element={<AdminOnlyRoute><AdminCatalogPage /></AdminOnlyRoute>} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/courses" element={<CoursesPage />} />

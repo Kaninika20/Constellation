@@ -10,6 +10,7 @@ const testIds = {
   course: 'ADMIN_DASHBOARD_COURSE',
   club: 'ADMIN_DASHBOARD_CLUB',
   event: 'ADMIN_DASHBOARD_EVENT',
+  createdEvent: `ADMIN_DASHBOARD_CREATED_EVENT_${Date.now()}`,
   interest: 'ADMIN_DASHBOARD_INTEREST'
 };
 let existingRiskState = null;
@@ -81,7 +82,7 @@ const cleanGraph = async () => {
       MATCH (n)
       WHERE n.studentId IN [$student, $related]
         OR n.courseCode = $course OR n.clubId = $club
-        OR n.eventId = $event OR n.name = $interest
+        OR n.eventId IN [$event, $createdEvent] OR n.name = $interest
       DETACH DELETE n
     `, testIds);
   } finally {
@@ -122,6 +123,16 @@ const run = async () => {
     assert(staleAdminDenied.statusCode === 403, 'Admin role claims are checked against the current Neo4j account role');
     const staleGraphDenied = await request({ url: '/api/admin/graph', role: 'admin' });
     assert(staleGraphDenied.statusCode === 403, 'Admin graph details require a current Neo4j administrator role');
+    const unauthenticatedEventCreate = await request({
+      method: 'POST', url: '/api/admin/events',
+      body: { title: 'Unauthorized event', date: '2026-12-20', location: 'Test Venue' }
+    });
+    assert(unauthenticatedEventCreate.statusCode === 401, 'Admin event creation rejects unauthenticated requests');
+    const studentEventCreate = await request({
+      method: 'POST', url: '/api/admin/events', role: 'student',
+      body: { title: 'Unauthorized event', date: '2026-12-20', location: 'Test Venue' }
+    });
+    assert(studentEventCreate.statusCode === 403, 'Admin event creation rejects non-admin students');
     const roleSession = getSession();
     try {
       await roleSession.run('MATCH (s:Student {studentId: $studentId}) SET s.role = $role', { studentId: testIds.student, role: 'admin' });
@@ -132,6 +143,21 @@ const run = async () => {
     const dashboard = await request({ url: '/api/admin/dashboard', role: 'admin' });
     assert(dashboard.statusCode === 200 && dashboard.body.data.totalStudents >= 2, 'Admin dashboard returns campus totals');
     assert(dashboard.body.data.riskDistribution.high >= 1 && dashboard.body.data.flaggedAccounts >= 1, 'Dashboard includes flagged risk distribution');
+    const createdEvent = await request({
+      method: 'POST', url: '/api/admin/events', role: 'admin',
+      body: {
+        eventId: testIds.createdEvent,
+        title: 'Admin Catalog Test Event',
+        date: '2026-12-20',
+        location: 'Test Venue',
+        description: 'Created by the admin catalog integration test.',
+        category: 'Workshop'
+      }
+    });
+    assert(
+      createdEvent.statusCode === 201 && createdEvent.body.data.category === 'Workshop',
+      'Admin can create a categorized campus event'
+    );
 
     const flagged = await request({ url: '/api/admin/flagged', role: 'admin' });
     assert(flagged.statusCode === 200 && flagged.body.data.some(student => student.studentId === testIds.student), 'Flagged-account list includes the synthetic high-risk student');

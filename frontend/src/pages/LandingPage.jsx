@@ -48,7 +48,7 @@ export const LandingPage = () => {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Campus<span className="text-campus-600">Graph</span>
+              Constella<span className="text-campus-600">tion</span>
             </h1>
             <p className="mt-3 text-xl sm:text-2xl font-medium text-slate-600">
               A Graph-Based College Social Network with Fraud Detection Using Neo4j

@@ -13,6 +13,7 @@ import {
 } from '../controllers/admin.controller.js';
 import { createCourse } from '../controllers/course.controller.js';
 import { createClub } from '../controllers/club.controller.js';
+import { createEvent as createAdminEvent } from '../controllers/event.controller.js';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use(requireAdmin);
 
 router.post('/courses', createCourse);
 router.post('/clubs', createClub);
+router.post('/events', createAdminEvent);
 
 router.get('/dashboard',                       getDashboardStats);
 router.get('/graph',                           getAdminNetworkOverview);

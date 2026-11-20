@@ -159,6 +159,14 @@ const runTests = async () => {
     assert(studentCreateClub.statusCode === 403,
       'Student cannot create a shared club record (403)', JSON.stringify(studentCreateClub.body));
 
+    const invalidCourseCredits = await mockRequest({
+      method: 'POST', url: '/api/admin/courses',
+      headers: adminToken,
+      body: { courseCode: 'INVALID1', courseName: 'Invalid Credits', department: 'Computer Science', credits: -1 }
+    });
+    assert(invalidCourseCredits.statusCode === 400,
+      'Admin course creation rejects out-of-range credits', JSON.stringify(invalidCourseCredits.body));
+
     // Admin creates a course
     const adminCreate = await mockRequest({
       method: 'POST', url: '/api/admin/courses',

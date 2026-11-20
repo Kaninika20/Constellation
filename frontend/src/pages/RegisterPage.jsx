@@ -85,7 +85,7 @@ export const RegisterPage = () => {
             <div className="w-10 h-10 rounded-2xl bg-campus-600 flex items-center justify-center text-white shadow-md shadow-campus-500/25">
               <Share2 className="w-5 h-5" />
             </div>
-            <span className="font-extrabold text-2xl text-slate-900 tracking-tight">Campus<span className="text-campus-600">Graph</span></span>
+            <span className="font-extrabold text-2xl text-slate-900 tracking-tight">Constella<span className="text-campus-600">tion</span></span>
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Register Student Node in Neo4j
