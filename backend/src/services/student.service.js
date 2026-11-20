@@ -273,74 +273,85 @@ export const updateStudentProfile = async (studentId, { name, department, yearOf
 /**
  * Returns Cytoscape / graph-ready nodes and edges for visualizing the campus graph.
  */
-export const getNetworkGraph = async ({ limit = 60 } = {}) => {
+export const getNetworkGraph = async ({ limit = 1000, includeRiskDetails = false } = {}) => {
   const session = getSession();
   try {
-    const query = `
+    const graphLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 1000, 1), 5000);
+    const studentResult = await session.run(`
       MATCH (s:Student)
-      OPTIONAL MATCH (s)-[r]->(target)
-      WHERE type(r) IN ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST']
-      WITH s, r, target
-      LIMIT $limit
-      RETURN s, r, target
-    `;
-
-    const result = await session.run(query, { limit: parseInt(limit, 10) });
-
+      RETURN s
+      ORDER BY s.studentId
+    `);
     const nodesMap = new Map();
     const edges = [];
-
-    result.records.forEach(record => {
-      const sourceNode = record.get('s');
-      const rel = record.get('r');
-      const targetNode = record.get('target');
-
-      if (sourceNode) {
-        const id = sourceNode.properties.studentId;
-        if (!nodesMap.has(id)) {
-          nodesMap.set(id, {
-            data: {
-              id,
-              label: sourceNode.properties.name,
-              type: 'Student',
-              department: sourceNode.properties.department,
-              yearOfStudy: sourceNode.properties.yearOfStudy,
-              riskScore: sourceNode.properties.fraudRiskScore || 0
-            }
-          });
-        }
+    const studentData = node => {
+      const properties = node.properties;
+      const data = {
+        id: properties.studentId,
+        label: properties.name || properties.studentId,
+        type: 'Student',
+        studentId: properties.studentId,
+        department: properties.department,
+        yearOfStudy: properties.yearOfStudy,
+        profileImageUrl: properties.profileImageUrl,
+        communityId: properties.communityId
+      };
+      if (includeRiskDetails) {
+        data.riskScore = properties.riskScore ?? properties.fraudRiskScore ?? 0;
+        data.riskLevel = properties.riskLevel || properties.riskCategory || 'Low';
+        data.riskIndicators = properties.riskIndicatorDetails
+          ? JSON.parse(properties.riskIndicatorDetails)
+          : properties.riskIndicators || [];
       }
+      return { data };
+    };
+    studentResult.records.forEach(record => {
+      const node = record.get('s');
+      nodesMap.set(node.properties.studentId, studentData(node));
+    });
 
-      if (targetNode && rel) {
-        const targetLabel = targetNode.labels[0] || 'Entity';
-        const targetId = targetNode.properties.studentId ||
-                         targetNode.properties.courseCode ||
-                         targetNode.properties.clubId ||
-                         targetNode.properties.eventId ||
-                         targetNode.properties.name;
-
-        if (targetId && !nodesMap.has(targetId)) {
-          nodesMap.set(targetId, {
-            data: {
-              id: targetId,
-              label: targetNode.properties.name || targetNode.properties.title || targetNode.properties.courseName || targetId,
-              type: targetLabel,
-              category: targetNode.properties.category || targetNode.properties.department || ''
-            }
-          });
-        }
-
-        if (sourceNode && targetId) {
-          edges.push({
-            data: {
-              id: `edge_${rel.identity.toString()}`,
-              source: sourceNode.properties.studentId,
-              target: targetId,
-              label: rel.type
-            }
-          });
-        }
+    const relationshipResult = await session.run(`
+      MATCH (s:Student)-[r]->(target)
+      WHERE type(r) IN ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST']
+      RETURN s, r, target
+      ORDER BY s.studentId, type(r), elementId(r)
+      LIMIT toInteger($limit)
+    `, { limit: graphLimit });
+    relationshipResult.records.forEach(record => {
+      const source = record.get('s');
+      const relationship = record.get('r');
+      const target = record.get('target');
+      const sourceId = source.properties.studentId;
+      const targetLabel = target.labels[0] || 'Entity';
+      const targetProperty = {
+        Course: target.properties.courseCode || target.properties.courseId || target.properties.name,
+        Club: target.properties.clubId || target.properties.name,
+        Event: target.properties.eventId || target.properties.title,
+        Interest: target.properties.name
+      }[targetLabel] || target.properties.studentId || target.properties.name;
+      const targetId = targetLabel === 'Student'
+        ? target.properties.studentId
+        : `${targetLabel}:${targetProperty}`;
+      if (!targetId) return;
+      if (!nodesMap.has(targetId)) {
+        const { passwordHash, ...safeTarget } = target.properties;
+        nodesMap.set(targetId, {
+          data: {
+            ...safeTarget,
+            id: targetId,
+            label: target.properties.name || target.properties.title || target.properties.courseName || targetId,
+            type: targetLabel
+          }
+        });
       }
+      edges.push({
+        data: {
+          id: `edge_${relationship.elementId}`,
+          source: sourceId,
+          target: targetId,
+          label: relationship.type
+        }
+      });
     });
 
     return {

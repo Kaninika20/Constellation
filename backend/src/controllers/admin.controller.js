@@ -1,4 +1,6 @@
 import * as adminService from '../services/admin.service.js';
+import { getNetworkGraph } from '../services/student.service.js';
+import { analyzeSuspiciousActivity } from '../services/fraud.service.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -22,6 +24,23 @@ export const recalculateScores = async (req, res, next) => {
       message: `Enhanced risk scores updated for ${result.updated} students.`,
       data: result,
     });
+  } catch (err) { next(err); }
+};
+
+export const runRiskAnalysis = async (req, res, next) => {
+  try {
+    const result = await analyzeSuspiciousActivity(req.body?.config);
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+export const getAdminNetworkOverview = async (req, res, next) => {
+  try {
+    const network = await getNetworkGraph({
+      limit: req.query.limit ?? 100,
+      includeRiskDetails: true
+    });
+    return res.status(200).json({ success: true, data: network });
   } catch (err) { next(err); }
 };
 
@@ -51,7 +70,10 @@ export const markAccountReviewed = async (req, res, next) => {
   try {
     const { studentId } = req.params;
     const reviewerStudentId = req.user.studentId;
-    const notes = req.body?.notes || '';
+    const notes = req.body?.notes ?? '';
+    if (typeof notes !== 'string' || notes.length > 2000) {
+      return res.status(400).json({ success: false, message: 'Review notes must be text no longer than 2000 characters.' });
+    }
 
     const result = await adminService.markAccountReviewed(studentId, reviewerStudentId, notes);
     return res.status(200).json({

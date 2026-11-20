@@ -192,12 +192,51 @@ export const getStudentRiskDetail = async (studentId) => {
 
     const sprops = r.get('s').properties;
     const { passwordHash, ...safeProps } = sprops;
+    const storedIndicators = safeProps.riskIndicatorDetails
+      ? JSON.parse(safeProps.riskIndicatorDetails)
+      : indicatorDetails;
+    const storedScore = safeProps.riskScore == null
+      ? normalised
+      : parseFloat((toFloat(safeProps.riskScore) / 100).toFixed(4));
+    const relatedRes = await session.run(`
+      MATCH (s:Student {studentId: $studentId})
+      CALL {
+        WITH s
+        OPTIONAL MATCH (s)-[:FRIENDS_WITH]-(related:Student)
+        RETURN collect(DISTINCT related {
+          .studentId, .name, .department, .riskLevel, .riskScore, .fraudRiskScore
+        }) AS friends
+      }
+      CALL {
+        WITH s
+        OPTIONAL MATCH (s)-[:FOLLOWS]->(related:Student)
+        RETURN collect(DISTINCT related {
+          .studentId, .name, .department, .riskLevel, .riskScore, .fraudRiskScore
+        }) AS following
+      }
+      CALL {
+        WITH s
+        OPTIONAL MATCH (related:Student)-[:FOLLOWS]->(s)
+        RETURN collect(DISTINCT related {
+          .studentId, .name, .department, .riskLevel, .riskScore, .fraudRiskScore
+        }) AS followers
+      }
+      RETURN friends, following, followers
+    `, { studentId });
+    const relatedRecord = relatedRes.records[0];
+    const reviewHistory = safeProps.reviewHistory
+      ? JSON.parse(safeProps.reviewHistory)
+      : (safeProps.reviewedAt ? [{
+          reviewedAt: typeof safeProps.reviewedAt === 'object' ? safeProps.reviewedAt.toString() : safeProps.reviewedAt,
+          reviewerStudentId: safeProps.reviewedBy || null,
+          notes: safeProps.reviewNotes || ''
+        }] : []);
 
     return {
       student: safeProps,
-      riskScore       : toFloat(safeProps.fraudRiskScore ?? normalised),
-      computedScore   : normalised,
-      riskCategory    : category,
+      riskScore       : toFloat(safeProps.fraudRiskScore ?? storedScore),
+      computedScore   : storedScore,
+      riskCategory    : safeProps.riskLevel || safeProps.riskCategory || category,
       reviewStatus    : safeProps.reviewStatus || 'pending',
       lastAnalysed    : safeProps.lastScoreUpdate
         ? (typeof safeProps.lastScoreUpdate === 'object' ? safeProps.lastScoreUpdate.toString() : safeProps.lastScoreUpdate)
@@ -208,8 +247,14 @@ export const getStudentRiskDetail = async (studentId) => {
         clubNames    : r.get('clubNames')   || [],
         friendNames  : r.get('friendNames') || [],
       },
-      activeIndicators,
-      indicatorDetails,
+      relatedAccounts: {
+        friends: (relatedRecord?.get('friends') || []).filter(account => account.studentId),
+        following: (relatedRecord?.get('following') || []).filter(account => account.studentId),
+        followers: (relatedRecord?.get('followers') || []).filter(account => account.studentId)
+      },
+      reviewHistory,
+      activeIndicators: safeProps.riskIndicators || activeIndicators,
+      indicatorDetails: storedIndicators,
       thresholds: DEFAULT_THRESHOLDS,
       scoreBreakdown: {
         rawScore,
@@ -232,7 +277,7 @@ export const getFlaggedStudents = async (thresholds = {}) => {
   try {
     const res = await session.run(`
       MATCH (s:Student)
-      WHERE s.fraudRiskScore >= $minScore
+      WHERE coalesce(s.riskScore, 0) > 0 OR coalesce(s.fraudRiskScore, 0) >= $minScore
       OPTIONAL MATCH (s)-[:STUDIES]->(c:Course)
       OPTIONAL MATCH (s)-[:MEMBER_OF]->(cl:Club)
       OPTIONAL MATCH (s)-[:FRIENDS_WITH]-(f:Student)
@@ -255,7 +300,7 @@ export const getFlaggedStudents = async (thresholds = {}) => {
       return {
         ...safe,
         fraudRiskScore : score,
-        riskCategory   : categorise(score, t),
+        riskCategory   : safe.riskLevel || safe.riskCategory || categorise(score, t),
         reviewStatus   : safe.reviewStatus || 'pending',
         courseCount    : toInt(r.get('courses')),
         clubCount      : toInt(r.get('clubs')),
@@ -263,6 +308,9 @@ export const getFlaggedStudents = async (thresholds = {}) => {
         followingCount : toInt(r.get('following')),
         followerCount  : toInt(r.get('followers')),
         riskIndicators : safe.riskIndicators || [],
+        riskIndicatorDetails: safe.riskIndicatorDetails
+          ? JSON.parse(safe.riskIndicatorDetails)
+          : [],
       };
     });
   } finally {
@@ -277,21 +325,38 @@ export const markAccountReviewed = async (studentId, reviewerStudentId, notes = 
   const driver = getDriver();
   const session = driver.session();
   try {
-    const res = await session.run(`
+    const res = await session.executeWrite(async tx => {
+      const existing = await tx.run(`
+        MATCH (s:Student {studentId: $studentId})
+        RETURN s.reviewHistory AS reviewHistory
+      `, { studentId });
+      if (!existing.records.length) {
+        const err = new Error(`Student '${studentId}' not found.`);
+        err.statusCode = 404;
+        throw err;
+      }
+      const history = existing.records[0].get('reviewHistory')
+        ? JSON.parse(existing.records[0].get('reviewHistory'))
+        : [];
+      const reviewedAt = new Date().toISOString();
+      history.push({ reviewedAt, reviewerStudentId, notes });
+      await tx.run(`
       MATCH (s:Student {studentId: $studentId})
       SET s.reviewStatus     = 'reviewed',
           s.reviewedBy       = $reviewerStudentId,
           s.reviewNotes      = $notes,
-          s.reviewedAt       = datetime()
-      RETURN s.studentId AS id, s.reviewStatus AS status
-    `, { studentId, reviewerStudentId, notes });
-
-    if (!res.records.length) {
-      const err = new Error(`Student '${studentId}' not found.`);
-      err.statusCode = 404;
-      throw err;
-    }
-    return { studentId, reviewStatus: 'reviewed', reviewedBy: reviewerStudentId };
+          s.reviewedAt       = datetime($reviewedAt),
+          s.reviewHistory    = $reviewHistory
+      RETURN s.studentId AS id
+      `, { studentId, reviewerStudentId, notes, reviewedAt, reviewHistory: JSON.stringify(history) });
+      return { reviewedAt };
+    });
+    return {
+      studentId,
+      reviewStatus: 'reviewed',
+      reviewedBy: reviewerStudentId,
+      reviewedAt: res.reviewedAt
+    };
   } finally {
     await session.close();
   }
@@ -305,36 +370,14 @@ export const getAdminDashboardStats = async () => {
   const driver = getDriver();
   const session = driver.session();
   try {
-    // Core counts
-    const countRes = await session.run(`
-      MATCH (s:Student) WITH count(s) AS students
-      OPTIONAL MATCH ()-[f:FRIENDS_WITH]-() WITH students, count(f)/2 AS friendships
-      OPTIONAL MATCH ()-[fw:FOLLOWS]->()   WITH students, friendships, count(fw) AS follows
-      RETURN students, friendships, follows
-    `);
-    const cr = countRes.records[0];
-
-    // Risk distribution
-    const riskRes = await session.run(`
-      MATCH (s:Student)
-      WHERE s.fraudRiskScore IS NOT NULL
-      WITH
-        count(CASE WHEN s.fraudRiskScore < $low  THEN 1 END) AS low,
-        count(CASE WHEN s.fraudRiskScore >= $low  AND s.fraudRiskScore < $high THEN 1 END) AS medium,
-        count(CASE WHEN s.fraudRiskScore >= $high THEN 1 END) AS high,
-        count(CASE WHEN s.fraudRiskScore >= $low  THEN 1 END) AS flagged
-      RETURN low, medium, high, flagged
-    `, { low: DEFAULT_THRESHOLDS.lowRisk, high: DEFAULT_THRESHOLDS.highRisk });
-    const rr = riskRes.records[0];
-
-    // Community count
-    const commRes = await session.run(`
+    const studentRes = await session.run('MATCH (s:Student) RETURN count(s) AS count');
+    const friendshipRes = await session.run('MATCH ()-[r:FRIENDS_WITH]-() RETURN count(DISTINCT r) AS count');
+    const followsRes = await session.run('MATCH ()-[r:FOLLOWS]->() RETURN count(r) AS count');
+    const communityRes = await session.run(`
       MATCH (s:Student) WHERE s.communityId IS NOT NULL
-      RETURN count(DISTINCT s.communityId) AS communities
+      RETURN count(DISTINCT s.communityId) AS count
     `);
-    const communities = toInt(commRes.records[0]?.get('communities'));
-
-    // Review status breakdown
+    const riskRes = await session.run('MATCH (s:Student) RETURN s.fraudRiskScore AS fraudRiskScore, s.riskScore AS riskScore, s.riskLevel AS riskLevel, s.riskCategory AS riskCategory, s.reviewStatus AS reviewStatus');
     const reviewRes = await session.run(`
       MATCH (s:Student)
       WITH
@@ -342,22 +385,28 @@ export const getAdminDashboardStats = async () => {
         count(CASE WHEN s.reviewStatus = 'pending'  OR s.reviewStatus IS NULL THEN 1 END) AS pending
       RETURN reviewed, pending
     `);
-    const rvr = reviewRes.records[0];
+
+    const riskDistribution = { low: 0, medium: 0, high: 0 };
+    let flaggedAccounts = 0;
+    for (const record of riskRes.records) {
+      const riskScore = toFloat(record.get('riskScore'));
+      const normalizedScore = toFloat(record.get('fraudRiskScore'));
+      const level = record.get('riskLevel') || record.get('riskCategory') || categorise(normalizedScore, DEFAULT_THRESHOLDS);
+      const key = level.toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(riskDistribution, key)) riskDistribution[key]++;
+      if (riskScore > 0 || normalizedScore >= DEFAULT_THRESHOLDS.lowRisk) flaggedAccounts++;
+    }
 
     return {
-      totalStudents    : toInt(cr.get('students')),
-      totalFriendships : toInt(cr.get('friendships')),
-      totalFollows     : toInt(cr.get('follows')),
-      totalCommunities : communities,
-      flaggedAccounts  : toInt(rr?.get('flagged') ?? 0),
-      riskDistribution : {
-        low    : toInt(rr?.get('low')    ?? 0),
-        medium : toInt(rr?.get('medium') ?? 0),
-        high   : toInt(rr?.get('high')   ?? 0),
-      },
+      totalStudents    : toInt(studentRes.records[0]?.get('count')),
+      totalFriendships : toInt(friendshipRes.records[0]?.get('count')),
+      totalFollows     : toInt(followsRes.records[0]?.get('count')),
+      totalCommunities : toInt(communityRes.records[0]?.get('count')),
+      flaggedAccounts,
+      riskDistribution,
       reviewStatus: {
-        reviewed : toInt(rvr?.get('reviewed') ?? 0),
-        pending  : toInt(rvr?.get('pending')  ?? 0),
+        reviewed : toInt(reviewRes.records[0]?.get('reviewed')),
+        pending  : toInt(reviewRes.records[0]?.get('pending')),
       },
       thresholds: DEFAULT_THRESHOLDS,
     };

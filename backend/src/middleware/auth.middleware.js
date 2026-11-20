@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { getSession } from '../config/neo4j.config.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'campusgraph_super_secret_jwt_key_2026_academic_project';
 
@@ -33,15 +34,33 @@ export const authenticateJWT = (req, res, next) => {
 /**
  * Middleware restricting a route to administrators.
  * Must run after authenticateJWT (which populates req.user).
- * Used to guard creation/management of shared course and club records.
+ * Used for all administrator-only investigation and management APIs.
  */
-export const requireAdmin = (req, res, next) => {
+export const requireAdmin = async (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({
       error: 'Forbidden',
-      message: 'Administrator privileges are required to create or manage shared course and club records.'
+      message: 'Administrator privileges are required to access this resource.'
     });
   }
-  next();
+
+  const session = getSession();
+  try {
+    const result = await session.run(`
+      MATCH (s:Student {studentId: $studentId})
+      RETURN s.role AS role
+    `, { studentId: req.user.studentId });
+    if (result.records[0]?.get('role') !== 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Administrator privileges are required to access this resource.'
+      });
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  } finally {
+    await session.close();
+  }
 };
 

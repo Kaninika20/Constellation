@@ -7,6 +7,20 @@ export const recalculateFraudScores = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const analyzeSuspiciousActivity = async (req, res, next) => {
+  try {
+    const result = await fraudService.analyzeSuspiciousActivity(req.body?.config);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+export const getSuspiciousActivityAnalysis = async (req, res, next) => {
+  try {
+    const result = await fraudService.getSuspiciousActivityAnalysis();
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
 export const getHighRiskStudents = async (req, res, next) => {
   try {
     const threshold = parseFloat(req.query.threshold) || 0.4;

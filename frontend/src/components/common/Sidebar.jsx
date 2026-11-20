@@ -26,6 +26,7 @@ const navItems = [
   { label: 'My Courses',        path: '/courses',            icon: BookOpen },
   { label: 'Campus Events',     path: '/events',             icon: CalendarDays },
   { label: 'Graph Visualizer',  path: '/network',            icon: Network },
+  { label: 'Community Analysis', path: '/communities',       icon: Users2 },
   { label: 'Interests & Skills',path: '/interests',          icon: Sparkles },
   { label: 'Fraud Detection',   path: '/fraud-radar',        icon: ShieldAlert, badge: 'Protected' },
   // Week 4 — Recommendation Engine
@@ -36,6 +37,9 @@ const navItems = [
 
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
+  const visibleNavItems = user?.role === 'admin'
+    ? [...navItems, { label: 'Admin Investigation', path: '/admin', icon: ShieldAlert, badge: 'Admin' }]
+    : navItems;
 
   return (
     <>
@@ -70,7 +74,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
           <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-2">
             Campus Social Graph
           </p>
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             // Insert a section divider before the Week 4 Recommendations group
             const isFirstRecoItem = item.path === '/recommendations';

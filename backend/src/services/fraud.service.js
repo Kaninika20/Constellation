@@ -1,5 +1,7 @@
-import { getDriver } from '../config/neo4j.config.js';
+import { getDriver, getSession } from '../config/neo4j.config.js';
 import neo4j from 'neo4j-driver';
+import { DEFAULT_RISK_CONFIG, scoreSuspiciousActivity, validateRiskConfig } from './graph-analysis.js';
+import { loadGraphSnapshot } from './graph-analysis-data.service.js';
 
 // Helper to safely convert Neo4j integers
 const toInt = (val) => (neo4j.isInt(val) ? val.toNumber() : (val ?? 0));
@@ -252,6 +254,96 @@ export const getPathBetween = async (studentIdA, studentIdB) => {
       distance: toInt(rec.get('distance')),
       path: rec.get('pathNodes'),
       message: `Connected in ${toInt(rec.get('distance'))} hop(s)`
+    };
+  } finally {
+    await session.close();
+  }
+};
+
+export const analyzeSuspiciousActivity = async configOverrides => {
+  const config = validateRiskConfig(configOverrides);
+  const session = getSession();
+  try {
+    const snapshot = await loadGraphSnapshot(session);
+    const analyzedAt = new Date().toISOString();
+    const students = scoreSuspiciousActivity({ ...snapshot, config, now: analyzedAt });
+    const persistenceRows = students.map(student => ({
+      studentId: student.studentId,
+      riskScore: student.riskScore,
+      fraudRiskScore: student.fraudRiskScore,
+      riskLevel: student.riskLevel,
+      indicators: student.riskIndicators.map(indicator => indicator.description),
+      indicatorDetails: JSON.stringify(student.riskIndicators)
+    }));
+
+    await session.run(`
+      UNWIND $rows AS row
+      MATCH (s:Student {studentId: row.studentId})
+      SET s.riskScore = row.riskScore,
+          s.fraudRiskScore = row.fraudRiskScore,
+          s.riskLevel = row.riskLevel,
+          s.riskIndicators = row.indicators,
+          s.riskIndicatorDetails = row.indicatorDetails,
+          s.riskConfiguration = $configuration,
+          s.riskAnalyzedAt = datetime($analyzedAt)
+    `, {
+      rows: persistenceRows,
+      configuration: JSON.stringify(config),
+      analyzedAt
+    });
+
+    return {
+      analyzedAt,
+      config,
+      analyzed: students.length,
+      riskLevelCounts: students.reduce((counts, student) => {
+        counts[student.riskLevel] += 1;
+        return counts;
+      }, { Low: 0, Medium: 0, High: 0 }),
+      students
+    };
+  } finally {
+    await session.close();
+  }
+};
+
+export const getSuspiciousActivityAnalysis = async () => {
+  const session = getSession();
+  try {
+    const result = await session.run(`
+      MATCH (s:Student)
+      WHERE s.riskScore IS NOT NULL
+      RETURN s.studentId AS studentId, s.name AS name, s.department AS department,
+        s.profileImageUrl AS profileImageUrl, s.riskScore AS riskScore,
+        s.fraudRiskScore AS fraudRiskScore, s.riskLevel AS riskLevel,
+        s.riskIndicatorDetails AS riskIndicatorDetails,
+        s.riskAnalyzedAt AS riskAnalyzedAt, s.riskConfiguration AS riskConfiguration,
+        s.friendCount AS friendCount
+      ORDER BY riskScore DESC, studentId
+    `);
+    const students = result.records.map(record => ({
+      studentId: record.get('studentId'),
+      name: record.get('name'),
+      department: record.get('department'),
+      profileImageUrl: record.get('profileImageUrl'),
+      riskScore: toInt(record.get('riskScore')),
+      fraudRiskScore: toFloat(record.get('fraudRiskScore')),
+      riskLevel: record.get('riskLevel'),
+      riskIndicators: JSON.parse(record.get('riskIndicatorDetails') || '[]'),
+      riskAnalyzedAt: record.get('riskAnalyzedAt')?.toString() || null
+    }));
+    const timestamp = result.records[0]?.get('riskAnalyzedAt');
+    const storedConfig = result.records[0]?.get('riskConfiguration');
+    const config = storedConfig ? validateRiskConfig(JSON.parse(storedConfig)) : DEFAULT_RISK_CONFIG;
+    return {
+      analyzedAt: timestamp?.toString() || null,
+      config,
+      analyzed: students.length,
+      riskLevelCounts: students.reduce((counts, student) => {
+        counts[student.riskLevel] += 1;
+        return counts;
+      }, { Low: 0, Medium: 0, High: 0 }),
+      students
     };
   } finally {
     await session.close();

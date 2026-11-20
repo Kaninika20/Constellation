@@ -5,23 +5,29 @@ import { Button } from '../components/common/Button';
 import { RiskScoreBadge } from '../components/fraud/RiskScoreBadge';
 import api from '../services/api';
 
-const MOCK_HIGH_RISK = [
-  { studentId: 'STU_MOCK1', name: 'Alex Bot', department: 'Unknown', fraudRiskScore: 0.90, courseCount: 0, clubCount: 0, followingCount: 15, followerCount: 0 },
-  { studentId: 'STU_MOCK2', name: 'Spam Account', department: 'Unknown', fraudRiskScore: 0.75, courseCount: 0, clubCount: 0, followingCount: 8, followerCount: 1 },
-];
-
-const MOCK_SYBIL = [
-  { studentId: 'STU_MOCK1', name: 'Alex Bot', department: 'Unknown', fraudRiskScore: 0.90, courseCount: 0, clubCount: 0, followingCount: 15, followerCount: 0, anomalyIndicators: ['No courses', 'No clubs', 'Following 15 accounts'] },
-  { studentId: 'STU_MOCK2', name: 'Spam Account', department: 'Unknown', fraudRiskScore: 0.75, courseCount: 0, clubCount: 0, followingCount: 8, followerCount: 1, anomalyIndicators: ['No courses', 'No clubs'] },
-];
-
-const MOCK_CLIQUES = [
-  { studentId: 'STU_MOCK1', name: 'Alex Bot', degree: 12, reason: 'Dense mutual-follow cluster with no academic activity' },
-  { studentId: 'STU_MOCK2', name: 'Spam Account', degree: 7, reason: 'Clique of accounts with identical follow patterns' },
-];
+const DEFAULT_RISK_CONFIG = {
+  highFriendCount: 30,
+  highFriendPoints: 25,
+  rapidFriendCount: 5,
+  rapidWindowHours: 24,
+  rapidGrowthPoints: 30,
+  coordinatedGroupMinSize: 4,
+  coordinatedDensityThreshold: 0.75,
+  coordinatedInactivityRatio: 0.75,
+  coordinatedGroupPoints: 25,
+  fewFriendMaxCount: 1,
+  fewConnectionsPoints: 15,
+  minAccountAgeDays: 7,
+  unusualMinFriendCount: 8,
+  unusualMaxClustering: 0.1,
+  unusualMaxReciprocity: 0.2,
+  unusualRelationshipPoints: 25,
+  mediumRiskThreshold: 30,
+  highRiskThreshold: 60,
+};
 
 const TABS = [
-  { id: 'risk-scores', label: 'Risk Scores' },
+  { id: 'risk-scores', label: 'Rule Analysis' },
   { id: 'sybil', label: 'Sybil Candidates' },
   { id: 'cliques', label: 'Suspicious Cliques' },
   { id: 'path-finder', label: 'Path Finder' },
@@ -38,11 +44,14 @@ const buildAnomalyIndicators = (s) => {
 export const FraudRadarPage = () => {
   const [activeTab, setActiveTab] = useState('risk-scores');
   const [highRiskStudents, setHighRiskStudents] = useState([]);
+  const [riskAnalysis, setRiskAnalysis] = useState(null);
+  const [riskConfig, setRiskConfig] = useState(DEFAULT_RISK_CONFIG);
   const [sybilCandidates, setSybilCandidates] = useState([]);
   const [suspiciousCliques, setSuspiciousCliques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
 
   const [pathStudentA, setPathStudentA] = useState('');
   const [pathStudentB, setPathStudentB] = useState('');
@@ -52,19 +61,23 @@ export const FraudRadarPage = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [riskRes, sybilRes, cliqueRes] = await Promise.allSettled([
-      api.get('/fraud/risk-scores'),
+    const [analysisRes, sybilRes, cliqueRes] = await Promise.allSettled([
+      api.get('/fraud/analysis'),
       api.get('/fraud/sybil-candidates'),
       api.get('/fraud/suspicious-cliques'),
     ]);
 
     let anyOffline = false;
 
-    if (riskRes.status === 'fulfilled') {
-      setHighRiskStudents(riskRes.value.data?.data || riskRes.value.data || []);
+    if (analysisRes.status === 'fulfilled') {
+      const analysis = analysisRes.value.data?.data || analysisRes.value.data;
+      setRiskAnalysis(analysis);
+      setRiskConfig(analysis.config || DEFAULT_RISK_CONFIG);
+      setHighRiskStudents((analysis.students || []).filter(student => student.riskScore > 0));
     } else {
       anyOffline = true;
-      setHighRiskStudents(MOCK_HIGH_RISK);
+      setRiskAnalysis(null);
+      setHighRiskStudents([]);
     }
 
     if (sybilRes.status === 'fulfilled') {
@@ -75,14 +88,14 @@ export const FraudRadarPage = () => {
       })));
     } else {
       anyOffline = true;
-      setSybilCandidates(MOCK_SYBIL);
+      setSybilCandidates([]);
     }
 
     if (cliqueRes.status === 'fulfilled') {
       setSuspiciousCliques(cliqueRes.value.data?.data || cliqueRes.value.data || []);
     } else {
       anyOffline = true;
-      setSuspiciousCliques(MOCK_CLIQUES);
+      setSuspiciousCliques([]);
     }
 
     setOffline(anyOffline);
@@ -93,11 +106,12 @@ export const FraudRadarPage = () => {
 
   const handleRecalculate = async () => {
     setRecalculating(true);
+    setAnalysisError('');
     try {
-      await api.post('/fraud/recalculate');
+      await api.post('/fraud/analyze', { config: riskConfig });
       await fetchAll();
     } catch (e) {
-      console.warn('Recalculate failed:', e.message);
+      setAnalysisError(e.response?.data?.message || 'Analysis failed. Check the configuration and Neo4j connection.');
     } finally {
       setRecalculating(false);
     }
@@ -135,13 +149,13 @@ export const FraudRadarPage = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">Fraud Radar</h1>
-            <p className="text-xs text-slate-500">Graph-based anomaly and sybil detection powered by Neo4j Cypher</p>
+            <p className="text-xs text-slate-500">Explainable graph indicators for human review — not proof of wrongdoing</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
             <ShieldAlert className="w-3.5 h-3.5" />
-            {totalFlagged} Flagged
+            {riskAnalysis?.riskLevelCounts?.High || 0} High risk
           </span>
           <Button
             size="sm"
@@ -150,7 +164,7 @@ export const FraudRadarPage = () => {
             disabled={recalculating}
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${recalculating ? 'animate-spin' : ''}`} />
-            {recalculating ? 'Recalculating…' : 'Recalculate Scores'}
+            {recalculating ? 'Analyzing…' : 'Analyze Network'}
           </Button>
         </div>
       </div>
@@ -159,7 +173,7 @@ export const FraudRadarPage = () => {
       {offline && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          Database offline – showing demo data
+          Analysis unavailable — no synthetic accounts are shown.
         </div>
       )}
 
@@ -188,18 +202,56 @@ export const FraudRadarPage = () => {
           {activeTab === 'risk-scores' && (
             <Card>
               <CardHeader
-                title="High Risk Students"
-                subtitle={`${totalFlagged} students flagged above threshold`}
+                title="Accounts with review indicators"
+                subtitle={riskAnalysis?.analyzedAt
+                  ? `${totalFlagged} accounts with indicators · analyzed ${new Date(riskAnalysis.analyzedAt).toLocaleString()}`
+                  : 'Run an analysis to calculate explainable rule-based scores.'}
               />
               <CardContent className="space-y-3">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+                  Risk categories prioritize manual review only. A score or indicator is not evidence that an account is fraudulent,
+                  and no account is automatically restricted.
+                </div>
+                <details className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700">Configure rule thresholds</summary>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {[
+                      ['highFriendCount', 'High friendship count'],
+                      ['rapidFriendCount', 'Recent friendships threshold'],
+                      ['rapidWindowHours', 'Rapid-growth window (hours)'],
+                      ['coordinatedGroupMinSize', 'Dense-group minimum size'],
+                      ['mediumRiskThreshold', 'Medium score threshold'],
+                      ['highRiskThreshold', 'High score threshold'],
+                    ].map(([key, label]) => (
+                      <label key={key} className="text-xs font-medium text-slate-600">
+                        {label}
+                        <input
+                          type="number"
+                          min="0"
+                          value={riskConfig[key]}
+                          onChange={event => setRiskConfig(config => ({
+                            ...config,
+                            [key]: event.target.value === '' ? '' : Number(event.target.value),
+                          }))}
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </details>
+                {analysisError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{analysisError}</div>
+                )}
                 {highRiskStudents.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-6">No high-risk students detected.</p>
+                  <p className="text-sm text-slate-500 text-center py-6">
+                    {riskAnalysis?.analyzedAt ? 'No accounts with rule indicators were returned.' : 'No analysis has been run yet.'}
+                  </p>
                 ) : (
                   highRiskStudents.map(s => (
                     <div
                       key={s.studentId}
                       className={`flex items-center justify-between p-3 rounded-xl border ${
-                        s.fraudRiskScore >= 0.75
+                        s.riskLevel === 'High'
                           ? 'bg-red-50 border-red-100'
                           : 'bg-slate-50 border-slate-100'
                       }`}
@@ -210,25 +262,22 @@ export const FraudRadarPage = () => {
                         </div>
                         <div className="min-w-0">
                           <p className={`text-sm font-semibold truncate ${s.fraudRiskScore >= 0.75 ? 'text-red-800' : 'text-slate-800'}`}>
-                            {s.name}
+                            {s.name || s.studentId}
                           </p>
                           <p className="text-xs text-slate-500">{s.department}</p>
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            Score {s.riskScore}/100 · {s.friendCount} friends · {s.recentFriendships} recent
+                          </p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {s.courseCount === 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">No courses</span>
-                            )}
-                            {s.clubCount === 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">No clubs</span>
-                            )}
-                            {s.followingCount > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                                Following {s.followingCount} accounts
+                            {(s.riskIndicators || []).map((indicator, index) => (
+                              <span key={`${indicator.rule}-${index}`} title={`${indicator.points} points`} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                                {indicator.description}
                               </span>
-                            )}
+                            ))}
                           </div>
                         </div>
                       </div>
-                      <RiskScoreBadge score={s.fraudRiskScore} />
+                      <RiskScoreBadge score={s.fraudRiskScore} riskLevel={s.riskLevel} />
                     </div>
                   ))
                 )}

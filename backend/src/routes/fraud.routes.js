@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { authenticateJWT } from '../middleware/auth.middleware.js';
 import {
   recalculateFraudScores,
+  analyzeSuspiciousActivity,
+  getSuspiciousActivityAnalysis,
   getHighRiskStudents,
   getSybilCandidates,
   getSuspiciousCliques,
@@ -13,6 +15,8 @@ const router = Router();
 
 router.use(authenticateJWT);
 
+router.get('/analysis',            getSuspiciousActivityAnalysis);
+router.post('/analyze',            analyzeSuspiciousActivity);
 router.get('/risk-scores',          getHighRiskStudents);
 router.get('/sybil-candidates',     getSybilCandidates);
 router.get('/suspicious-cliques',   getSuspiciousCliques);

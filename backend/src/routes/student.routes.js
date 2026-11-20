@@ -16,7 +16,7 @@ const router = Router();
 router.get('/', getStudents);
 
 // Network graph overview for Cytoscape.js
-router.get('/network/overview', getNetworkOverview);
+router.get('/network/overview', authenticateJWT, getNetworkOverview);
 
 // View authenticated student's own profile (Must be defined before /:id)
 router.get('/me', authenticateJWT, getMyProfile);

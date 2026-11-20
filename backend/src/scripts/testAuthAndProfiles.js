@@ -222,6 +222,30 @@ const runTests = async () => {
     res6.body
   );
 
+  // -------------------------------------------------------------------------
+  // Test 7: Administrator-only investigation APIs
+  // -------------------------------------------------------------------------
+  const res7 = await mockRequest({
+    method: 'GET',
+    url: '/api/admin/dashboard',
+    headers: { authorization: `Bearer ${tokenStudentA}` }
+  });
+  assert(
+    res7.statusCode === 403 && res7.body.error === 'Forbidden',
+    'Investigation dashboard blocks authenticated students (403 Forbidden)',
+    res7.body
+  );
+
+  const res8 = await mockRequest({
+    method: 'GET',
+    url: '/api/students/network/overview'
+  });
+  assert(
+    res8.statusCode === 401 && res8.body.error === 'Unauthorized',
+    'Graph overview blocks unauthenticated requests (401 Unauthorized)',
+    res8.body
+  );
+
   console.log('\n===============================================================');
   console.log(` Test Summary: ${passed} Passed, ${failed} Failed`);
   console.log('===============================================================');

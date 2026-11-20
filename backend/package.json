@@ -12,6 +12,8 @@
     "test:auth": "node src/scripts/testAuthAndProfiles.js",
     "test:relationships": "node src/scripts/testSocialRelationships.js",
     "test:fraud": "node src/scripts/testFraudDetection.js",
+    "test:graph-analysis": "node --test src/scripts/graph-analysis.test.js",
+    "test:admin-dashboard": "node src/scripts/testAdminDashboard.js",
     "test:friendship": "node src/scripts/testFriendship.js",
     "test:following": "node src/scripts/testFollowing.js",
     "test:phase3c": "node src/scripts/testPhase3C.js",

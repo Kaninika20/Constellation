@@ -139,10 +139,23 @@ export const createStudent = async (req, res, next) => {
 export const getNetworkOverview = async (req, res, next) => {
   try {
     const { limit = 100 } = req.query;
-    const network = await studentService.getNetworkGraph({ limit });
+    const network = await studentService.getNetworkGraph({
+      limit,
+      includeRiskDetails: false
+    });
     return res.status(200).json({
       data: network
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminNetworkOverview = async (req, res, next) => {
+  try {
+    const { limit = 100 } = req.query;
+    const network = await studentService.getNetworkGraph({ limit, includeRiskDetails: true });
+    return res.status(200).json({ data: network });
   } catch (error) {
     next(error);
   }

@@ -3,7 +3,9 @@ import { authenticateJWT } from '../middleware/auth.middleware.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
 import {
   getDashboardStats,
+  getAdminNetworkOverview,
   recalculateScores,
+  runRiskAnalysis,
   getFlaggedStudents,
   getStudentRiskDetail,
   markAccountReviewed,
@@ -14,19 +16,17 @@ import { createClub } from '../controllers/club.controller.js';
 
 const router = Router();
 
-// All admin routes require authentication.
-// In production, an `requireAdmin` middleware would additionally check
-// req.user.role === 'admin'. For this academic project all logged-in users
-// can access the admin dashboard for demonstration purposes.
 router.use(authenticateJWT);
+router.use(requireAdmin);
 
-// Shared course/club record creation is restricted to administrators (Phase 3C)
-router.post('/courses', requireAdmin, createCourse);
-router.post('/clubs', requireAdmin, createClub);
+router.post('/courses', createCourse);
+router.post('/clubs', createClub);
 
 router.get('/dashboard',                       getDashboardStats);
+router.get('/graph',                           getAdminNetworkOverview);
 router.get('/thresholds',                      getDefaultThresholds);
 router.post('/recalculate',                    recalculateScores);
+router.post('/analyze',                         runRiskAnalysis);
 router.get('/flagged',                         getFlaggedStudents);
 router.get('/student/:studentId/risk',         getStudentRiskDetail);
 router.post('/student/:studentId/review',      markAccountReviewed);

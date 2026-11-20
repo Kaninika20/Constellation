@@ -56,6 +56,19 @@ const tokenFor = (studentId, email, role = 'student') =>
 const A = { id: 'STU2026001', email: 'aarav.sharma@campus.edu' };
 const authA = { authorization: `Bearer ${tokenFor(A.id, A.email, 'student')}` };
 const adminToken = { authorization: `Bearer ${tokenFor('STU2026001', 'admin@campus.edu', 'admin')}` };
+let originalRole;
+
+const setAccountRole = async role => {
+  const session = getSession();
+  try {
+    await session.run(
+      'MATCH (s:Student {studentId: $studentId}) SET s.role = $role',
+      { studentId: A.id, role }
+    );
+  } finally {
+    await session.close();
+  }
+};
 
 // Reset A's enrollments/memberships to seed + remove leftover test nodes
 const resetState = async () => {
@@ -94,7 +107,18 @@ const runTests = async () => {
   console.log(' CampusGraph Phase 3C - Course, Club & Interest Management Tests');
   console.log('===============================================================');
 
+  const roleSession = getSession();
+  try {
+    const roleResult = await roleSession.run(
+      'MATCH (s:Student {studentId: $studentId}) RETURN s.role AS role',
+      { studentId: A.id }
+    );
+    originalRole = roleResult.records[0]?.get('role') || 'student';
+  } finally {
+    await roleSession.close();
+  }
   await resetState();
+  await setAccountRole('admin');
   console.log('  (reset enrollments/memberships to seed, cleared test nodes)');
 
   // 1. Unauthorized access ---------------------------------------------------
@@ -286,6 +310,7 @@ const runTests = async () => {
 
   // Clean up test-created shared records
   await resetState();
+  await setAccountRole(originalRole);
 
   await closeDriver();
   process.exit(failed > 0 ? 1 : 0);
@@ -293,6 +318,10 @@ const runTests = async () => {
 
 runTests().catch(async (err) => {
   console.error('[Test Runner] Fatal error:', err);
-  await closeDriver();
+  try {
+    if (originalRole !== undefined) await setAccountRole(originalRole);
+  } finally {
+    await closeDriver();
+  }
   process.exit(1);
 });
