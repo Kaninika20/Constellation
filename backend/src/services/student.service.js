@@ -1,4 +1,5 @@
 import { getSession } from '../config/neo4j.config.js';
+import { syncStudentDepartment } from './department.service.js';
 
 /**
  * Strips sensitive fields (like passwordHash) from node properties.
@@ -241,6 +242,10 @@ export const updateStudentProfile = async (studentId, { name, department, yearOf
     const updateRes = await session.run(updateQuery, params);
     const updatedStudentProps = sanitizeStudent(updateRes.records[0].get('s').properties);
 
+    if (department !== undefined) {
+      await syncStudentDepartment(session, studentId, department);
+    }
+
     // 3. Update Interests relationships if provided
     if (Array.isArray(interests)) {
       // Remove old HAS_INTEREST relationships
@@ -284,6 +289,17 @@ export const getNetworkGraph = async ({ limit = 1000, includeRiskDetails = false
     `);
     const nodesMap = new Map();
     const edges = [];
+    const graphNodeId = (label, properties) => {
+      if (label === 'Student') return properties.studentId;
+      const property = {
+        Course: properties.courseCode || properties.courseId || properties.name,
+        Department: properties.name,
+        Club: properties.clubId || properties.name,
+        Event: properties.eventId || properties.title,
+        Interest: properties.name
+      }[label] || properties.studentId || properties.name;
+      return property ? `${label}:${property}` : null;
+    };
     const studentData = node => {
       const properties = node.properties;
       const data = {
@@ -311,28 +327,32 @@ export const getNetworkGraph = async ({ limit = 1000, includeRiskDetails = false
     });
 
     const relationshipResult = await session.run(`
-      MATCH (s:Student)-[r]->(target)
-      WHERE type(r) IN ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST']
-      RETURN s, r, target
-      ORDER BY s.studentId, type(r), elementId(r)
+      MATCH (source)-[r]->(target)
+      WHERE type(r) IN ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST', 'BELONGS_TO', 'OFFERED_BY']
+        AND (source:Student OR source:Course)
+      RETURN source, r, target
+      ORDER BY labels(source)[0], coalesce(source.studentId, source.courseCode), type(r), elementId(r)
       LIMIT toInteger($limit)
     `, { limit: graphLimit });
     relationshipResult.records.forEach(record => {
-      const source = record.get('s');
+      const source = record.get('source');
       const relationship = record.get('r');
       const target = record.get('target');
-      const sourceId = source.properties.studentId;
+      const sourceLabel = source.labels[0] || 'Entity';
+      const sourceId = graphNodeId(sourceLabel, source.properties);
       const targetLabel = target.labels[0] || 'Entity';
-      const targetProperty = {
-        Course: target.properties.courseCode || target.properties.courseId || target.properties.name,
-        Club: target.properties.clubId || target.properties.name,
-        Event: target.properties.eventId || target.properties.title,
-        Interest: target.properties.name
-      }[targetLabel] || target.properties.studentId || target.properties.name;
-      const targetId = targetLabel === 'Student'
-        ? target.properties.studentId
-        : `${targetLabel}:${targetProperty}`;
-      if (!targetId) return;
+      const targetId = graphNodeId(targetLabel, target.properties);
+      if (!sourceId || !targetId) return;
+      if (!nodesMap.has(sourceId)) {
+        nodesMap.set(sourceId, {
+          data: {
+            ...source.properties,
+            id: sourceId,
+            label: source.properties.name || source.properties.courseName || sourceId,
+            type: sourceLabel
+          }
+        });
+      }
       if (!nodesMap.has(targetId)) {
         const { passwordHash, ...safeTarget } = target.properties;
         nodesMap.set(targetId, {

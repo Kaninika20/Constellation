@@ -115,30 +115,43 @@ flowchart TD
 flowchart LR
   Student[":Student"]
   Course[":Course"]
+  Department[":Department"]
   Club[":Club"]
   Event[":Event"]
   Interest[":Interest"]
+  Message[":Message"]
+  MessageReport[":MessageReport"]
 
   Student -->|"STUDIES"| Course
+  Student -->|"BELONGS_TO"| Department
+  Course -->|"OFFERED_BY"| Department
   Student -->|"MEMBER_OF"| Club
   Student -->|"PARTICIPATES_IN"| Event
   Student -->|"HAS_INTEREST"| Interest
+  Student -->|"SENT_MESSAGE"| Message
+  Message -->|"MESSAGE_TO"| Student
+  Student -->|"SUBMITTED_REPORT"| MessageReport
+  MessageReport -->|"ABOUT_MESSAGE"| Message
+  MessageReport -->|"REPORTS_STUDENT"| Student
   Student <-->|"FRIENDS_WITH (undirected meaning)"| Student
   Student -->|"FOLLOWS (directed)"| Student
   Student -.->|"PENDING_FRIEND_REQUEST (directed)"| Student
 ```
 
-`PENDING_FRIEND_REQUEST` is part of the application schema but is not one of the six relationship types drawn by the interactive graph explorer.
+`PENDING_FRIEND_REQUEST` is part of the application schema but is not drawn by the interactive graph explorer. Schema initialization synchronizes legacy department properties into `Department` nodes, linking students with `BELONGS_TO` and courses with `OFFERED_BY`.
 
 ### Constraints and indexes
 
-`npm run db:init` creates or verifies six uniqueness constraints:
+`npm run db:init` creates or verifies nine uniqueness constraints:
 
 - `Student.studentId` and `Student.email`
 - `Course.courseCode`
 - `Club.clubId`
 - `Event.eventId`
 - `Interest.name`
+- `Department.name`
+- `Message.messageId`
+- `MessageReport.reportKey`
 
 It also creates five explicit property indexes for student department, year, and name; course department; and event date. Neo4j additionally creates backing indexes for uniqueness constraints.
 
@@ -146,12 +159,19 @@ It also creates five explicit property indexes for student department, year, and
 
 - **Authentication and profiles:** Registration hashes passwords with bcryptjs (10 salt rounds); login issues signed JWTs. Profile updates require authentication, validation, and ownership checks. Student response sanitization omits `passwordHash`.
 - **Friendships and following:** Friend-request lifecycle, mutual friendships, follower/following lists, and duplicate-action handling.
+- **Messaging and safety reports:** Authenticated one-to-one text conversations are stored as `Message` nodes; reading and sending are restricted to currently confirmed friends. A recipient can report a received obscene or sexually inappropriate message once, with optional context. Reports are private to the reporter and administrators, who can review or dismiss them. Reports do not automatically label or restrict an account.
 - **Campus records:** Browse and manage course enrollment, club membership, event participation, and interests.
 - **Recommendations and connections:** Rank eligible students using shared graph context; show mutual connections and paths.
-- **Community analysis:** Detect groups using deterministic label propagation over undirected `FRIENDS_WITH` edges.
+- **Community analysis:** Detect groups using deterministic label propagation over friendships, follows, and shared courses, departments, clubs, events, and interests.
 - **Fraud and risk analysis:** Compute rule-based indicators from relationship structure, activity, and academic engagement. Scores explain which rules contributed.
-- **Administrator investigation:** Dashboard counts and risk distribution, flagged profiles, suspicious connections, review status, investigation notes, and history. `/api/admin/*` uses JWT authentication, requires the `admin` claim, and checks the current Neo4j role before allowing access.
-- **Interactive graph:** Cytoscape.js renders Student, Course, Club, Event, and Interest nodes with `FRIENDS_WITH`, `FOLLOWS`, `STUDIES`, `MEMBER_OF`, `PARTICIPATES_IN`, and `HAS_INTEREST` relationships. Search, relationship filters, selection details, connected-student highlighting, community/risk highlighting, and shortest-path display use backend APIs.
+- **Administrator investigation:** Dashboard counts and risk distribution, flagged profiles, explainable risk indicators, a two-hop suspicious-neighborhood explorer, review status, investigation notes, and history. `/api/admin/*` uses JWT authentication, requires the `admin` claim, and checks the current Neo4j role before allowing access.
+- **Interactive graph:** Cytoscape.js renders Student, Course, Department, Club, Event, and Interest nodes with their graph relationships. Search, relationship filters, selection details, connected-student highlighting, community/risk highlighting, and shortest-path display use backend APIs.
+
+### Messaging and report endpoints
+
+- `GET /api/messages/:friendId` and `POST /api/messages/:friendId` require authentication and a confirmed friendship.
+- `POST /api/messages/:friendId/:messageId/report` lets only the recipient of that message report it, with optional moderator context.
+- Admins can review pending reports at `GET /api/admin/message-reports` and mark them `reviewed` or `dismissed` with `PATCH /api/admin/message-reports/:reportId`.
 
 ### Recommendation algorithm
 
@@ -169,7 +189,7 @@ Candidates are excluded if they are the requesting student, already friends, or 
 
 ### Community detection methodology
 
-Community detection runs deterministic label propagation in application code, using only confirmed `FRIENDS_WITH` edges. Student IDs are sorted and ties are resolved deterministically; the algorithm runs for at most 30 iterations. Community density is internal friendship edges divided by the number of possible pairs. This is a lightweight heuristic, not Louvain or a GDS procedure. The current Docker configuration does not include GDS.
+Community detection runs deterministic label propagation in application code over an undirected student projection. Edges represent confirmed friendships, follows, or shared courses, departments, clubs, events, and interests. Student IDs are sorted and ties are resolved deterministically; the algorithm runs for at most 30 iterations. Community density is internal projected connections divided by the number of possible pairs. Friendship-only metrics used by risk rules remain based on confirmed friendships. This is a lightweight heuristic, not Louvain or a GDS procedure. The current Docker configuration does not include GDS.
 
 ### Fraud detection and risk scoring
 
@@ -197,12 +217,12 @@ MATCH (b:Student {studentId: $studentIdB})
 MERGE (a)-[:FRIENDS_WITH]-(b);
 ```
 
-The path finder can query any two selected students through the authenticated `GET /api/recommendations/path/:studentIdA/:studentIdB?maxHops=6` endpoint. The requested hop count is capped at 10; the Cypher traversal uses a literal maximum and filters by the requested count:
+The path finder can query any two selected students through the authenticated `GET /api/recommendations/path/:studentIdA/:studentIdB?maxHops=6` endpoint. It traverses friendships, follows, courses, departments, clubs, events, and interests. The requested hop count is capped at 10; the Cypher traversal uses a literal maximum and filters by the requested count:
 
 ```cypher
 MATCH path = shortestPath(
   (a:Student {studentId: $studentIdA})
-  -[:FRIENDS_WITH|STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST*1..10]-
+  -[:FRIENDS_WITH|FOLLOWS|STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST|BELONGS_TO|OFFERED_BY*1..10]-
   (b:Student {studentId: $studentIdB})
 )
 WHERE length(path) <= $maxHops
@@ -251,6 +271,14 @@ Requirements: Node.js 20 or newer, npm, and Docker (or a reachable Neo4j 5 datab
    ```
 
    **Warning:** `db:seed` currently deletes all nodes in the configured database before inserting fixtures. Do not run it against data that must be retained.
+
+   To add an isolated, synthetic fraud-review cluster without deleting existing data, run this instead:
+
+   ```bash
+   npm run db:seed-demo-fraud
+   ```
+
+   It creates six demo-only accounts, their department links, a recent friendship clique, and explainable risk indicators. These accounts have no login credentials and are not real fraud findings. The command is idempotent for its demo IDs.
 
 5. Start the backend and frontend in separate terminals:
 
@@ -323,7 +351,8 @@ These are targeted integration and smoke checks, not a production-scale load or 
 
 ## Known limitations
 
-- Community detection is deterministic label propagation and can produce heuristic groupings; GDS is not installed.
+- Community detection is deterministic label propagation over combined social and shared-campus links and can produce heuristic groupings; GDS is not installed.
+- Department nodes are created from student and course department properties during schema initialization; run `npm run db:init` after deploying this graph-schema update.
 - The risk-scoring routes overlap and persist different scoring models; consolidate them before using scores as a single operational metric.
 - Risk scores and seed data are illustrative and are not calibrated for real fraud decisions.
 - The frontend bundle is large and has a Vite chunk-size warning.

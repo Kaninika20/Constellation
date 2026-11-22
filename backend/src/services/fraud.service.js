@@ -240,7 +240,7 @@ export const getPathBetween = async (studentIdA, studentIdB) => {
   try {
     const result = await session.run(`
       MATCH path = shortestPath(
-        (s1:Student {studentId: $studentIdA})-[*..8]-(s2:Student {studentId: $studentIdB})
+        (s1:Student {studentId: $studentIdA})-[:FRIENDS_WITH|FOLLOWS*..8]-(s2:Student {studentId: $studentIdB})
       )
       RETURN [node IN nodes(path) | node { .studentId, .name, .department }] AS pathNodes,
         length(path) AS distance

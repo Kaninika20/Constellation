@@ -14,7 +14,8 @@ import {
   Shield,
   LogOut,
   UserCheck,
-  GitBranch
+  GitBranch,
+  MessageCircle
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { CygnusMark } from './CygnusMark';
@@ -23,6 +24,7 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { label: 'Dashboard',         path: '/dashboard',          icon: LayoutDashboard },
   { label: 'My Network',        path: '/my-network',         icon: Users,      badge: 'Social' },
+  { label: 'Messages',          path: '/messages',           icon: MessageCircle },
   { label: 'Student Directory', path: '/directory',          icon: Users2 },
   { label: 'My Profile',        path: '/profile',            icon: User },
   { label: 'Campus Clubs',      path: '/clubs',              icon: Users2 },

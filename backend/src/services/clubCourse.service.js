@@ -1,5 +1,6 @@
 import { getSession } from '../config/neo4j.config.js';
 import { sanitizeStudent } from './student.service.js';
+import { syncCourseDepartment } from './department.service.js';
 
 /**
  * -----------------------------------------------------------------------------
@@ -346,6 +347,7 @@ export const createCourse = async ({ courseCode, courseName, department, credits
       department: normalizedDepartment,
       credits: normalizedCredits
     });
+    await syncCourseDepartment(session, normalizedCourseCode, normalizedDepartment);
     return res.records[0].get('c').properties;
   } finally {
     await session.close();

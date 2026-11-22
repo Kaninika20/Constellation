@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getSession, verifyConnection, closeDriver } from '../config/neo4j.config.js';
-import { initializeSchema } from '../services/schema.service.js';
+import { initializeSchema, synchronizeDepartmentRelationships } from '../services/schema.service.js';
 
 const seedDatabase = async () => {
   console.log('--- Constellation Database Seeding ---');
@@ -188,6 +188,8 @@ const seedDatabase = async () => {
         passwordHash: defaultPasswordHash
       });
     }
+
+    await synchronizeDepartmentRelationships(session);
 
     console.log('Connecting Relationships...');
     

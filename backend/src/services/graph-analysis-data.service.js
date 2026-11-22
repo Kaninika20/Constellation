@@ -57,5 +57,23 @@ export const loadGraphSnapshot = async session => {
     target: record.get('target')
   }));
 
-  return { students, friendships, follows };
+  const sharedRelationshipResult = await session.run(`
+    MATCH (a:Student)-[r:STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST|BELONGS_TO]->(shared)
+          <-[:STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST|BELONGS_TO]-(b:Student)
+    WHERE a.studentId < b.studentId
+    RETURN a.studentId AS source, b.studentId AS target,
+      type(r) AS type
+  `);
+  const sharedRelationships = sharedRelationshipResult.records.map(record => ({
+    source: record.get('source'),
+    target: record.get('target'),
+    type: record.get('type')
+  }));
+  const communityEdges = [
+    ...friendships.map(edge => ({ ...edge, type: 'FRIENDS_WITH' })),
+    ...follows.map(edge => ({ ...edge, type: 'FOLLOWS' })),
+    ...sharedRelationships
+  ];
+
+  return { students, friendships, follows, communityEdges };
 };

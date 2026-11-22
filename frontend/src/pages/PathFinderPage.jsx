@@ -14,6 +14,7 @@ import { useStudents } from '../hooks/useStudents';
 const NODE_STYLES = {
   Student : { bg: 'bg-blue-100',    text: 'text-blue-800',    border: 'border-blue-300',   icon: User },
   Course  : { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300', icon: BookOpen },
+  Department: { bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-300', icon: Users2 },
   Club    : { bg: 'bg-purple-100',  text: 'text-purple-800',  border: 'border-purple-300',  icon: Users2 },
   Event   : { bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-300',   icon: CalendarDays },
   Interest: { bg: 'bg-pink-100',    text: 'text-pink-800',    border: 'border-pink-300',    icon: Sparkles },
@@ -27,6 +28,9 @@ const REL_STYLES = {
   MEMBER_OF      : 'bg-purple-50 text-purple-700 border-purple-200',
   PARTICIPATES_IN: 'bg-amber-50  text-amber-700  border-amber-200',
   HAS_INTEREST   : 'bg-pink-50   text-pink-700   border-pink-200',
+  FOLLOWS        : 'bg-red-50 text-red-700 border-red-200',
+  BELONGS_TO     : 'bg-slate-100 text-slate-700 border-slate-300',
+  OFFERED_BY     : 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
 // ─── Mock result ──────────────────────────────────────────────────────────────
@@ -263,16 +267,16 @@ export const PathFinderPage = () => {
                 <p className="font-bold text-slate-900">Neo4j shortestPath</p>
                 <p className="font-mono bg-white/60 rounded p-2 text-[10px] leading-relaxed border border-campus-100 text-campus-900">
                   MATCH path = shortestPath(<br />
-                  &nbsp;(a)-[:FRIENDS_WITH|STUDIES<br />
-                  &nbsp;&nbsp;|MEMBER_OF|PARTICIPATES_IN<br />
-                  &nbsp;&nbsp;|HAS_INTEREST*1..{maxHops}]-(b)<br />
+                  &nbsp;(a)-[:FRIENDS_WITH|FOLLOWS|STUDIES<br />
+                  &nbsp;&nbsp;|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST<br />
+                  &nbsp;&nbsp;|BELONGS_TO|OFFERED_BY*1..{maxHops}]-(b)<br />
                   )<br />
                   RETURN nodes(path),<br />
                   &nbsp;&nbsp;[r IN rels(path) | type(r)],<br />
                   &nbsp;&nbsp;length(path) AS hops
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Traverses all 5 relationship types. Returns the minimum-hop path and labels each step.
+                  Traverses student, campus-entity, and department relationships. Returns the minimum-hop path and labels each step.
                 </p>
               </div>
             </div>

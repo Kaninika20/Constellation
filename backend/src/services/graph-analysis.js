@@ -102,15 +102,21 @@ const normalizeEdges = (students, edges) => {
     const target = edge.target ?? edge.targetId ?? edge.s2;
     if (!ids.has(source) || !ids.has(target) || source === target) continue;
     const key = source < target ? `${source}\u0000${target}` : `${target}\u0000${source}`;
-    if (!unique.has(key)) unique.set(key, { ...edge, source, target });
+    const type = edge.type ?? edge.relationshipType;
+    if (!unique.has(key)) {
+      unique.set(key, { ...edge, source, target, types: type ? [type] : [] });
+    } else if (type && !unique.get(key).types.includes(type)) {
+      unique.get(key).types.push(type);
+    }
   }
   return [...unique.values()];
 };
 
-export const detectCommunities = (students, friendships, maxIterations = 30) => {
+export const detectCommunities = (students, friendships, maxIterations = 30, relationshipEdges = []) => {
   const ids = students.map(student => student.studentId).sort();
   const adjacency = new Map(ids.map(id => [id, new Set()]));
-  const edges = normalizeEdges(students, friendships);
+  const friendshipEdges = normalizeEdges(students, friendships);
+  const edges = normalizeEdges(students, [...friendships, ...relationshipEdges]);
   for (const { source, target } of edges) {
     adjacency.get(source).add(target);
     adjacency.get(target).add(source);
@@ -170,11 +176,12 @@ export const detectCommunities = (students, friendships, maxIterations = 30) => 
 
   return {
     algorithm: 'label-propagation',
-    description: 'Deterministic label propagation over undirected FRIENDS_WITH edges; a heuristic, not Louvain.',
+    description: 'Deterministic label propagation over combined social and shared-campus relationships; a heuristic, not Louvain.',
     iterations,
     communities,
     communityByStudent,
-    edges
+    edges,
+    friendships: friendshipEdges
   };
 };
 
@@ -187,9 +194,16 @@ const timestampMillis = value => {
 const hasEngagement = student =>
   (student.courseCount || 0) + (student.clubCount || 0) + (student.interestCount || 0) > 0;
 
-export const scoreSuspiciousActivity = ({ students, friendships, follows = [], now = new Date(), config: configOverrides = {} }) => {
+export const scoreSuspiciousActivity = ({
+  students,
+  friendships,
+  follows = [],
+  communityEdges = [],
+  now = new Date(),
+  config: configOverrides = {}
+}) => {
   const config = validateRiskConfig(configOverrides);
-  const graph = detectCommunities(students, friendships);
+  const graph = detectCommunities(students, friendships, 30, communityEdges);
   const timestamp = now instanceof Date ? now.getTime() : Date.parse(now);
   const nowMillis = Number.isFinite(timestamp) ? timestamp : Date.now();
   const cutoff = nowMillis - config.rapidWindowHours * 60 * 60 * 1000;
@@ -201,7 +215,7 @@ export const scoreSuspiciousActivity = ({ students, friendships, follows = [], n
     followerIds: new Set(),
     recentFriendships: 0
   }]));
-  for (const edge of graph.edges) {
+  for (const edge of graph.friendships) {
     const source = metrics.get(edge.source);
     const target = metrics.get(edge.target);
     source.friendIds.add(edge.target);

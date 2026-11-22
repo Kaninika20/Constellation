@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardList, RefreshCw, ShieldAlert, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardList, RefreshCw, ShieldAlert, Users, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { RiskScoreBadge } from '../components/fraud/RiskScoreBadge';
+import { SuspiciousNetworkExplorer } from '../components/fraud/SuspiciousNetworkExplorer';
 import api from '../services/api';
+
+const formatTimestamp = value => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+};
 
 const STAT_CARDS = [
   ['totalStudents', 'Students', Users],
@@ -16,22 +23,26 @@ const STAT_CARDS = [
 export const AdminDashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [flagged, setFlagged] = useState([]);
+  const [messageReports, setMessageReports] = useState([]);
   const [selected, setSelected] = useState(null);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [savingReview, setSavingReview] = useState(false);
+  const [resolvingReportId, setResolvingReportId] = useState(null);
 
   const loadDashboard = async () => {
     setLoading(true);
     setError('');
     try {
-      const [dashboardResponse, flaggedResponse] = await Promise.all([
+      const [dashboardResponse, flaggedResponse, reportsResponse] = await Promise.all([
         api.get('/admin/dashboard'),
-        api.get('/admin/flagged')
+        api.get('/admin/flagged'),
+        api.get('/admin/message-reports')
       ]);
       setStats(dashboardResponse.data.data);
       setFlagged(flaggedResponse.data.data || []);
+      setMessageReports(reportsResponse.data.data || []);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Admin dashboard data could not be loaded.');
     } finally {
@@ -79,6 +90,19 @@ export const AdminDashboardPage = () => {
     }
   };
 
+  const resolveMessageReport = async (reportId, status) => {
+    setError('');
+    setResolvingReportId(reportId);
+    try {
+      await api.patch(`/admin/message-reports/${encodeURIComponent(reportId)}`, { status });
+      await loadDashboard();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'The message report could not be updated.');
+    } finally {
+      setResolvingReportId(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -121,6 +145,53 @@ export const AdminDashboardPage = () => {
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full ${color}`} style={{ width: `${percent}%` }} /></div>
                 </div>;
               })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Student message reports"
+              subtitle={`${messageReports.length} pending report${messageReports.length === 1 ? '' : 's'} about obscene or sexually inappropriate messages`}
+            />
+            <CardContent className="space-y-3">
+              {messageReports.map(report => (
+                <article key={report.reportId} className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="text-xs text-slate-600">
+                        <span className="font-semibold">{report.reporter?.name || report.reporter?.studentId}</span>
+                        {' reported '}
+                        <span className="font-semibold">{report.reportedStudent?.name || report.reportedStudent?.studentId}</span>
+                        <span className="text-slate-400"> · {formatTimestamp(report.submittedAt)}</span>
+                      </div>
+                      <blockquote className="whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
+                        {report.messageContent}
+                      </blockquote>
+                      {report.details && <p className="text-xs text-slate-600"><span className="font-semibold">Reporter context: </span>{report.details}</p>}
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => resolveMessageReport(report.reportId, 'reviewed')}
+                        disabled={resolvingReportId === report.reportId}
+                        className="inline-flex items-center gap-1 rounded-lg bg-campus-600 px-3 py-2 text-xs font-semibold text-white hover:bg-campus-700 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />Mark reviewed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => resolveMessageReport(report.reportId, 'dismissed')}
+                        disabled={resolvingReportId === report.reportId}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />Dismiss
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">A report is a request for review, not a finding of fraud or misconduct.</p>
+                </article>
+              ))}
+              {!messageReports.length && <p className="py-6 text-center text-sm text-slate-500">There are no pending student message reports.</p>}
             </CardContent>
           </Card>
 
@@ -175,6 +246,11 @@ export const AdminDashboardPage = () => {
                         {!Object.values(selected.relatedAccounts || {}).some(accounts => accounts.length) && <p className="text-slate-500">No related accounts found.</p>}
                       </div>
                     </div>
+                    <SuspiciousNetworkExplorer
+                      key={selected.student.studentId}
+                      studentId={selected.student.studentId}
+                      onSelectAccount={inspectAccount}
+                    />
                     <div>
                       <h3 className="mb-2 text-sm font-semibold text-slate-800">Review history</h3>
                       <div className="max-h-32 space-y-2 overflow-y-auto rounded-lg bg-slate-50 p-2 text-xs">

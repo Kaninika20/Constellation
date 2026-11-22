@@ -54,6 +54,36 @@ test('label propagation separates disconnected groups and keeps isolated student
   assert.equal(result.communities.flatMap(community => community.members).length, students.length);
 });
 
+test('label propagation combines friendship, academic, and follow connections', () => {
+  const students = ['A', 'B', 'C', 'D'].map(id => makeStudent(id));
+  const result = detectCommunities(
+    students,
+    [{ source: 'A', target: 'B' }],
+    30,
+    [
+      { source: 'B', target: 'C', type: 'FOLLOWS' },
+      { source: 'C', target: 'D', type: 'STUDIES' }
+    ]
+  );
+
+  assert.equal(result.communities.length, 1);
+  assert.equal(result.communities[0].size, 4);
+  assert.ok(result.edges.some(edge => edge.types.includes('STUDIES')));
+  assert.equal(result.friendships.length, 1);
+});
+
+test('academic community links do not inflate friendship-based risk metrics', () => {
+  const students = [makeStudent('A'), makeStudent('B')];
+  const results = scoreSuspiciousActivity({
+    students,
+    friendships: [],
+    communityEdges: [{ source: 'A', target: 'B', type: 'STUDIES' }],
+    now
+  });
+
+  assert.deepEqual(results.map(student => student.friendCount), [0, 0]);
+});
+
 test('synthetic normal students avoid high risk while suspicious patterns are explained', () => {
   const network = createSyntheticNetwork();
   const results = scoreSuspiciousActivity({ ...network, now });

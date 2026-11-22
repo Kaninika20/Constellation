@@ -23,6 +23,7 @@ import { CommunityAnalysisPage } from './pages/CommunityAnalysisPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AdminCatalogPage } from './pages/AdminCatalogPage';
 import { AdminAccessPage } from './pages/AdminAccessPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { useAuth } from './context/AuthContext';
 
 const AdminOnlyRoute = ({ children }) => {
@@ -44,6 +45,7 @@ function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/my-network" element={<MyNetworkPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
           <Route path="/directory" element={<StudentDirectoryPage />} />
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/communities" element={<CommunityAnalysisPage />} />

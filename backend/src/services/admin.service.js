@@ -318,6 +318,71 @@ export const getFlaggedStudents = async (thresholds = {}) => {
   }
 };
 
+export const getStudentSuspiciousNetwork = async (studentId, limit = 100) => {
+  const session = getDriver().session();
+  try {
+    const rootResult = await session.run(`
+      MATCH (root:Student {studentId: $studentId})
+      RETURN root
+    `, { studentId });
+    if (!rootResult.records.length) return null;
+
+    const nodeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 100, 1), 200);
+    const nodeResult = await session.run(`
+      MATCH (root:Student {studentId: $studentId})
+      MATCH path = (root)-[:FRIENDS_WITH|FOLLOWS*0..2]-(student:Student)
+      WITH student, min(length(path)) AS distance
+      ORDER BY distance, student.studentId
+      LIMIT toInteger($limit)
+      RETURN student {
+        .studentId, .name, .department, .riskScore, .fraudRiskScore, .riskLevel, .riskCategory
+      } AS student, distance
+    `, { studentId, limit: nodeLimit + 1 });
+    const truncated = nodeResult.records.length > nodeLimit;
+    const nodes = nodeResult.records.slice(0, nodeLimit).map(record => {
+      const student = record.get('student');
+      const rawScore = Number(student.riskScore ?? student.fraudRiskScore ?? 0);
+      const riskScore = rawScore <= 1 ? rawScore * 100 : rawScore;
+      const riskLevel = student.riskLevel || student.riskCategory ||
+        (riskScore >= 60 ? 'High' : riskScore >= 30 ? 'Medium' : 'Low');
+      return {
+        ...student,
+        riskScore,
+        riskLevel,
+        suspicious: riskLevel === 'High' || riskLevel === 'Medium' || riskScore >= 30,
+        distance: toInt(record.get('distance'))
+      };
+    });
+    const studentIds = nodes.map(node => node.studentId);
+    const edgeResult = await session.run(`
+      MATCH (a:Student)-[r:FRIENDS_WITH|FOLLOWS]-(b:Student)
+      WHERE a.studentId IN $studentIds AND b.studentId IN $studentIds
+      RETURN elementId(r) AS id, startNode(r).studentId AS source,
+        endNode(r).studentId AS target, type(r) AS type
+      LIMIT 400
+    `, { studentIds });
+    const edges = [...new Map(edgeResult.records.map(record => {
+      const edge = {
+        id: record.get('id'),
+        source: record.get('source'),
+        target: record.get('target'),
+        type: record.get('type')
+      };
+      return [edge.id, edge];
+    })).values()];
+
+    return {
+      studentId,
+      nodes,
+      edges,
+      flaggedCount: nodes.filter(node => node.suspicious).length,
+      truncated
+    };
+  } finally {
+    await session.close();
+  }
+};
+
 /**
  * Marks a student account as reviewed by an admin.
  */
@@ -356,6 +421,71 @@ export const markAccountReviewed = async (studentId, reviewerStudentId, notes = 
       reviewStatus: 'reviewed',
       reviewedBy: reviewerStudentId,
       reviewedAt: res.reviewedAt
+    };
+  } finally {
+    await session.close();
+  }
+};
+
+export const getMessageReports = async (status = 'pending') => {
+  const session = getDriver().session();
+  try {
+    const result = await session.run(`
+      MATCH (reporter:Student)-[:SUBMITTED_REPORT]->(report:MessageReport)-[:ABOUT_MESSAGE]->(message:Message)
+      MATCH (report)-[:REPORTS_STUDENT]->(reportedStudent:Student)
+      WHERE $status IS NULL OR report.status = $status
+      RETURN report.reportId AS reportId, report.category AS category,
+        report.details AS details, report.status AS status,
+        report.submittedAt AS submittedAt, report.reviewedAt AS reviewedAt,
+        report.reviewedBy AS reviewedBy, report.reviewNotes AS reviewNotes,
+        reporter { .studentId, .name } AS reporter,
+        reportedStudent { .studentId, .name } AS reportedStudent,
+        message.messageId AS messageId, message.content AS messageContent
+      ORDER BY report.submittedAt DESC
+      LIMIT 100
+    `, { status });
+    return result.records.map(record => ({
+      reportId: record.get('reportId'),
+      category: record.get('category'),
+      details: record.get('details') || '',
+      status: record.get('status'),
+      submittedAt: record.get('submittedAt')?.toString() || null,
+      reviewedAt: record.get('reviewedAt')?.toString() || null,
+      reviewedBy: record.get('reviewedBy'),
+      reviewNotes: record.get('reviewNotes') || '',
+      reporter: record.get('reporter'),
+      reportedStudent: record.get('reportedStudent'),
+      messageId: record.get('messageId'),
+      messageContent: record.get('messageContent')
+    }));
+  } finally {
+    await session.close();
+  }
+};
+
+export const reviewMessageReport = async (reportId, reviewerStudentId, status, notes = '') => {
+  const session = getDriver().session();
+  try {
+    const result = await session.run(`
+      MATCH (report:MessageReport {reportId: $reportId})
+      SET report.status = $status,
+        report.reviewedBy = $reviewerStudentId,
+        report.reviewedAt = datetime(),
+        report.reviewNotes = $notes
+      RETURN report.reportId AS reportId, report.status AS status,
+        report.reviewedAt AS reviewedAt, report.reviewedBy AS reviewedBy
+    `, { reportId, reviewerStudentId, status, notes });
+    if (!result.records.length) {
+      const error = new Error(`Message report '${reportId}' not found.`);
+      error.statusCode = 404;
+      throw error;
+    }
+    const record = result.records[0];
+    return {
+      reportId: record.get('reportId'),
+      status: record.get('status'),
+      reviewedAt: record.get('reviewedAt')?.toString() || null,
+      reviewedBy: record.get('reviewedBy')
     };
   } finally {
     await session.close();

@@ -8,7 +8,10 @@ import {
   runRiskAnalysis,
   getFlaggedStudents,
   getStudentRiskDetail,
+  getStudentSuspiciousNetwork,
   markAccountReviewed,
+  getMessageReports,
+  reviewMessageReport,
   getDefaultThresholds,
   setStudentRole,
 } from '../controllers/admin.controller.js';
@@ -33,6 +36,9 @@ router.post('/recalculate',                    recalculateScores);
 router.post('/analyze',                         runRiskAnalysis);
 router.get('/flagged',                         getFlaggedStudents);
 router.get('/student/:studentId/risk',         getStudentRiskDetail);
+router.get('/student/:studentId/suspicious-network', getStudentSuspiciousNetwork);
 router.post('/student/:studentId/review',      markAccountReviewed);
+router.get('/message-reports',                 getMessageReports);
+router.patch('/message-reports/:reportId',     reviewMessageReport);
 
 export default router;

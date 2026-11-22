@@ -90,6 +90,9 @@ export const register = async ({
         updatedAt: datetime()
       })
       WITH s
+      MERGE (d:Department {name: $department})
+      MERGE (s)-[:BELONGS_TO]->(d)
+      WITH s
       FOREACH (interestName IN $interests |
         MERGE (i:Interest {name: trim(interestName)})
         ON CREATE SET i.category = 'General'

@@ -66,6 +66,16 @@ export const getStudentRiskDetail = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const getStudentSuspiciousNetwork = async (req, res, next) => {
+  try {
+    const network = await adminService.getStudentSuspiciousNetwork(req.params.studentId);
+    if (!network) {
+      return res.status(404).json({ error: 'Not Found', message: 'Student not found.' });
+    }
+    return res.status(200).json({ success: true, data: network });
+  } catch (err) { next(err); }
+};
+
 export const markAccountReviewed = async (req, res, next) => {
   try {
     const { studentId } = req.params;
@@ -81,6 +91,45 @@ export const markAccountReviewed = async (req, res, next) => {
       message: 'Account marked as reviewed.',
       data: result,
     });
+  } catch (err) { next(err); }
+};
+
+export const getMessageReports = async (req, res, next) => {
+  try {
+    const status = req.query.status === undefined ? 'pending' : req.query.status;
+    if (!['pending', 'reviewed', 'dismissed', 'all'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Report status must be pending, reviewed, dismissed, or all.'
+      });
+    }
+    const reports = await adminService.getMessageReports(status === 'all' ? null : status);
+    return res.status(200).json({ success: true, data: reports, count: reports.length });
+  } catch (err) { next(err); }
+};
+
+export const reviewMessageReport = async (req, res, next) => {
+  try {
+    const { status, notes = '' } = req.body || {};
+    if (!['reviewed', 'dismissed'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Report status must be reviewed or dismissed.'
+      });
+    }
+    if (typeof notes !== 'string' || notes.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Review notes must be text no longer than 2000 characters.'
+      });
+    }
+    const report = await adminService.reviewMessageReport(
+      req.params.reportId,
+      req.user.studentId,
+      status,
+      notes
+    );
+    return res.status(200).json({ success: true, data: report });
   } catch (err) { next(err); }
 };
 

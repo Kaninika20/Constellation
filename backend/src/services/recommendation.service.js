@@ -300,8 +300,9 @@ export const getMutualFriends = async (studentIdA, studentIdB) => {
 
 /**
  * Finds the shortest connection path between two students across all
- * relationship types: FRIENDS_WITH, STUDIES (via shared Course),
- * MEMBER_OF (via shared Club), PARTICIPATES_IN (via shared Event).
+ * relationship types: FRIENDS_WITH, FOLLOWS, STUDIES (via shared Course),
+ * MEMBER_OF (via shared Club), PARTICIPATES_IN (via shared Event),
+ * HAS_INTEREST (via shared Interest), and department connections.
  *
  * Returns detailed path with node types and relationship labels.
  *
@@ -326,17 +327,18 @@ export const getConnectionPath = async (studentIdA, studentIdB, maxHops = 6) => 
       MATCH (a:Student {studentId: $studentIdA}),
             (b:Student {studentId: $studentIdB})
       MATCH path = shortestPath(
-        (a)-[:FRIENDS_WITH|STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST*1..10]-(b)
+        (a)-[:FRIENDS_WITH|FOLLOWS|STUDIES|MEMBER_OF|PARTICIPATES_IN|HAS_INTEREST|BELONGS_TO|OFFERED_BY*1..10]-(b)
       )
       WHERE length(path) <= $maxHops
       RETURN
         [n IN nodes(path) |
           CASE
             WHEN n:Student  THEN {id: n.studentId, label: n.name, type: 'Student', department: n.department}
-            WHEN n:Course   THEN {id: n.courseCode, label: n.courseName, type: 'Course'}
-            WHEN n:Club     THEN {id: n.clubId, label: n.name, type: 'Club'}
-            WHEN n:Event    THEN {id: n.eventId, label: n.title, type: 'Event'}
-            WHEN n:Interest THEN {id: n.name, label: n.name, type: 'Interest'}
+            WHEN n:Course   THEN {id: 'Course:' + n.courseCode, label: n.courseName, type: 'Course'}
+            WHEN n:Department THEN {id: 'Department:' + n.name, label: n.name, type: 'Department'}
+            WHEN n:Club     THEN {id: 'Club:' + n.clubId, label: n.name, type: 'Club'}
+            WHEN n:Event    THEN {id: 'Event:' + n.eventId, label: n.title, type: 'Event'}
+            WHEN n:Interest THEN {id: 'Interest:' + n.name, label: n.name, type: 'Interest'}
             ELSE {id: 'unknown', label: 'Unknown', type: 'Unknown'}
           END
         ] AS pathNodes,

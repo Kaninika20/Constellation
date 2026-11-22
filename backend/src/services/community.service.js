@@ -11,8 +11,8 @@ const classifyCohesion = density => {
 export const detectCommunities = async () => {
   const session = getSession();
   try {
-    const { students, friendships } = await loadGraphSnapshot(session);
-    const result = groupStudents(students, friendships);
+    const { students, friendships, communityEdges } = await loadGraphSnapshot(session);
+    const result = groupStudents(students, friendships, 30, communityEdges);
     const detectedAt = new Date().toISOString();
     const memberships = result.communities.flatMap(community =>
       community.members.map(member => ({ studentId: member.studentId, communityId: community.communityId }))
@@ -48,7 +48,7 @@ export const detectCommunities = async () => {
       profileImageUrl: student.profileImageUrl,
       communityId: communityByStudent.get(student.studentId)
     }));
-    const edges = result.edges.map(({ source, target }) => ({ source, target }));
+    const edges = result.edges.map(({ source, target, types }) => ({ source, target, types }));
 
     return {
       communities,

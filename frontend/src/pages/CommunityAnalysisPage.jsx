@@ -105,7 +105,7 @@ export const CommunityAnalysisPage = () => {
             Community Analysis
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Explore groups inferred from confirmed FRIENDS_WITH relationships.
+            Explore groups inferred from friendships, follows, shared courses, departments, clubs, events, and interests.
           </p>
         </div>
         <Button size="sm" onClick={runAnalysis} disabled={loading}>
@@ -118,7 +118,7 @@ export const CommunityAnalysisPage = () => {
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           Neo4j GDS Louvain is not installed in the configured Neo4j 5.26 Community instance.
-          Communities use deterministic label propagation, a heuristic that can vary from Louvain and is not evidence of misconduct.
+          Communities use deterministic label propagation over combined social and shared-campus relationships; this heuristic is not evidence of misconduct.
         </p>
       </div>
 

@@ -18,6 +18,7 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import communityRoutes from './routes/community.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import messageRoutes from './routes/message.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 
 dotenv.config();
@@ -49,6 +50,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Root route welcoming message & API discovery
 app.get('/', (req, res) => {
@@ -68,7 +70,8 @@ app.get('/', (req, res) => {
       analytics: '/api/analytics',
       recommendations: '/api/recommendations',
       communities: '/api/communities',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      messages: '/api/messages'
     }
   });
 });

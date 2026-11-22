@@ -6,9 +6,9 @@ import { Button } from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-const NODE_TYPES = ['Student', 'Course', 'Club', 'Event', 'Interest'];
-const RELATIONSHIPS = ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST'];
-const TYPE_COLORS = { Student: '#2563eb', Course: '#10b981', Club: '#8b5cf6', Event: '#f59e0b', Interest: '#ec4899' };
+const NODE_TYPES = ['Student', 'Course', 'Department', 'Club', 'Event', 'Interest'];
+const RELATIONSHIPS = ['FRIENDS_WITH', 'FOLLOWS', 'STUDIES', 'MEMBER_OF', 'PARTICIPATES_IN', 'HAS_INTEREST', 'BELONGS_TO', 'OFFERED_BY'];
+const TYPE_COLORS = { Student: '#2563eb', Course: '#10b981', Department: '#475569', Club: '#8b5cf6', Event: '#f59e0b', Interest: '#ec4899' };
 const COMMUNITY_COLORS = ['#2563eb', '#7c3aed', '#059669', '#ea580c', '#db2777', '#0891b2', '#ca8a04', '#4f46e5'];
 
 export const NetworkPage = () => {
